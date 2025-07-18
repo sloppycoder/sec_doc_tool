@@ -31,7 +31,68 @@ pytest --cov=. --cov-report=html
 
 ## Architecture Overview
 
-This project processes SEC EDGAR filings with text analysis and tagging capabilities:
+This project is a comprehensive SEC EDGAR filing processing tool that downloads, parses, chunks, and analyzes financial documents using NLP and AI techniques.
+
+### Core Components
+
+#### 1. EDGAR Document Processing (`sec_doc_tool/edgar.py`)
+- **EdgarFiling class**: Main class for downloading and parsing SEC filings
+- Downloads filings from SEC EDGAR database using requests with rate limiting
+- Parses index-headers.html and index.html files to extract document metadata
+- Handles different document types (485BPOS, HTML, TXT files)
+- Implements caching layer for downloaded content
+
+#### 2. Document Chunking (`sec_doc_tool/chunking/`)
+- **HTML Splitter** (`html_splitter.py`): Splits HTML documents by page breaks
+  - Detects various page break markers (HR tags, CSS page-break styles)
+  - Preprocesses HTML to remove invisible divs and comments
+  - Converts HTML to clean text using html2text
+- **Text Chunker** (`text_chunker.py`): Intelligent text segmentation
+  - Uses spaCy for sentence boundary detection
+  - Handles tables, headers, and structured content
+  - Batch processing for performance optimization
+  - Configurable chunk size (default: 3000 characters)
+
+#### 3. Content Analysis & Tagging (`sec_doc_tool/tagging/`)
+- **NER Tagger** (`text_tagger.py`): Named Entity Recognition using spaCy
+  - Identifies persons, monetary amounts, job titles
+  - Counts managers, trustees, and financial ranges
+  - Pattern matching for specific financial document entities
+- **LLM Tagger** (`llm_tagger.py`): AI-powered content analysis
+  - Uses LiteLLM for multi-provider LLM integration
+  - Supports various models (default: gemini-2.5-flash)
+  - Structured JSON output with cost tracking
+
+#### 4. Caching System (`sec_doc_tool/file_cache.py`)
+- **Dual storage support**: Local filesystem and Google Cloud Storage
+- **Configurable via environment**: `CACHE_PREFIX` determines storage location
+- **Automatic fallback**: GCS → local file → download from source
+- **Pickle-based serialization** for complex objects
+
+#### 5. Document Management (`sec_doc_tool/__init__.py`)
+- **ChunkedDocument**: Pydantic model for processed documents
+- **DocumentChunk**: Individual text segments with metadata and tags
+- **Automatic persistence**: Saves processed documents to cache
+- **Lazy loading**: Loads from cache before reprocessing
+
+### Data Flow
+
+1. **Input**: CIK (Central Index Key) and Accession Number
+2. **Download**: Fetch filing from SEC EDGAR via `EdgarFiling`
+3. **Parse**: Extract document content and metadata
+4. **Chunk**: Split into manageable segments using appropriate splitter
+5. **Tag**: Apply NER and LLM analysis to each chunk
+6. **Cache**: Store processed results for future use
+7. **Output**: Structured `ChunkedDocument` with analyzed content
+
+### Key Technologies
+
+- **Web Scraping**: requests, BeautifulSoup, tenacity (retry logic)
+- **NLP**: spaCy (en_core_web_sm), html2text
+- **AI Integration**: LiteLLM (supports OpenAI, Google, Anthropic models)
+- **Data Validation**: Pydantic models
+- **Storage**: Google Cloud Storage, local filesystem
+- **Testing**: pytest with comprehensive test coverage
 
 
 ## Configuration
