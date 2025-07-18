@@ -1,9 +1,8 @@
 import logging
 import logging.config
-import yaml
 from pathlib import Path
 
-
+import yaml
 
 # Load the logging configuration
 LOGGING_CONFIG = {}
