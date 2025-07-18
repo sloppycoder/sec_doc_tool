@@ -22,8 +22,8 @@ dependencies = [
     "tenacity>=8.5.0",
 ]
 
-[tool.setuptools]
-packages = ["sec_doc_tool"]
+[tool.setuptools.packages.find]
+where = ["."]
 
 [build-system]
 requires = ["setuptools>=42", "wheel"]
