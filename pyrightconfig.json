@@ -1,6 +1,7 @@
 {
     "exclude": [
-        ".venv/"
+        ".venv/",
+        "build/"
     ],
     "include": [
         "*.py",

@@ -1,0 +1,60 @@
+# the branching model is trunk based development. the trunk is main in this case
+#
+# this workflow will be triggered when
+#
+#  1. a pull request is raised
+#  2. a push to 'main' branch takes place
+#  3. a release tag is created on the repo
+#
+#  whenever the event is trigger, build and test will be performed
+#  a container image will be created and pushed to ghcr.io only when the event
+#  trigger is push to main.
+#
+#  for push to main branch, main-YYYYMMDD-HHMISS-SHA7. the tagging should be
+#  sortable by chronological order so that it can be picked up by CD tools,
+#  e.g. FluxCD, for updating the deployment automatically
+#
+#  for new tag, the image tag will be same as the repository tag. e.g. 0.1.0
+#
+#
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "rel-*"
+
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "0.7.19"
+          enable-cache: true
+
+      - name: Install Python using uv
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: |
+          uv sync
+
+      - name: Linting
+        run: |
+          uv run ruff check .
+
+      - name: Unit tests
+        id: unit_tests
+        run: |
+          uv run pytest -v -s

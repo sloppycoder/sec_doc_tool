@@ -1,22 +1,19 @@
+import logging
+import os
 from pathlib import Path
-from typing import Callable
 
 import pytest
 
-mock_data_path = Path(__file__).parent / "mockdata"
+mock_data_path = Path(__file__).parent / "mockdata/cache"
+os.environ["CACHE_PREFIX"] = str(mock_data_path)
+
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 
 @pytest.fixture(scope="session")
-def mock_file_content() -> Callable:
+def mock_file_content():
     def _mock_file_content(file_name):
-        with open(mock_data_path / file_name, "r") as f:
+        with open(mock_data_path / file_name) as f:
             return f.read()
 
     return _mock_file_content
-
-
-
-
-
-
-

@@ -1,5 +1,4 @@
-
-exclude: "^$|deploy|scripts|tmp"
+exclude: "^$|deploy|scripts|tmp|.vscode|.claude"
 fail_fast: false
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -10,15 +9,6 @@ repos:
       - id: check-toml
       # - id: debug-statements
       #   args: ["--print-changes"]
-
-  - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.7.19
-    hooks:
-      - id: uv-lock
-      - id: pip-compile
-        name: requirements.txt
-        args: [pyproject.toml, -o, requirements.txt]
-        files: ^(pyproject\.toml|uv\.lock)$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.12.3
@@ -36,4 +26,3 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
-
