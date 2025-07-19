@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import pickle
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -20,11 +19,12 @@ MAX_CHUNK_SIZE = 2000
 
 
 class DocumentChunk(BaseModel):
+    cik: str
+    accession_number: str
     num: int = Field(ge=0)
     text: str
     html: str
     tags: dict[str, Any] = {}
-    parent: ChunkedDocument = Field(..., serialization_exclude=True)  # pyright: ignore
     _llm_cost: float = 0.0  # internal use only
 
     @property
@@ -52,7 +52,7 @@ class DocumentChunk(BaseModel):
 
         self.tags = {**ner_tags, **llm_tags}
         logger.debug(
-            f"Tagged chunk {self.num} of filing {self.parent.cik}/{self.parent.accession_number} with {self.tags}"
+            f"Tagged chunk {self.num} of filing {self.cik}/{self.accession_number} with {self.tags}"
         )
         return self.tags
 
@@ -78,10 +78,10 @@ class ChunkedDocument(BaseModel):
         None if cached file doesn't exist or cannot be valided
         """
         try:
-            cache_file_path = f"chunked_filing/{cik}/{accession_number}.pickle"
+            cache_file_path = f"chunked_filing/{cik}/{accession_number}.json"
             data = load_obj_from_cache(cache_file_path)
             if data:
-                return pickle.loads(data)
+                return ChunkedDocument.model_validate_json(data)
         except Exception as e:
             logger.info(f"Failed to load ChunkedFiling from cache: {e}")
             return None
@@ -90,7 +90,13 @@ class ChunkedDocument(BaseModel):
         """
         Add a chunk to the filing
         """
-        chunk = DocumentChunk(num=num, text=text, html=html, parent=self)
+        chunk = DocumentChunk(
+            num=num,
+            text=text,
+            html=html,
+            cik=self.cik,
+            accession_number=self.accession_number,
+        )
         self.chunks.append(chunk)
         return chunk
 
@@ -155,9 +161,9 @@ class ChunkedDocument(BaseModel):
         Returns True if saved successfully, False otherwise
         """
         try:
-            cache_file_path = f"chunked_filing/{self.cik}/{self.accession_number}.pickle"
-            data = pickle.dumps(self)
-            return write_obj_to_cache(cache_file_path, data)
+            cache_file_path = f"chunked_filing/{self.cik}/{self.accession_number}.json"
+            data = self.model_dump_json()
+            return write_obj_to_cache(cache_file_path, data.encode("utf-8"))
         except Exception as e:
             logger.error(f"Failed to save ChunkedFiling to cache: {e}")
             return False
