@@ -10,7 +10,6 @@ from sec_doc_tool.tagging.llm_tagger_prompt import prompt
 
 logger = logging.getLogger(__name__)
 
-model = os.environ.get("MODEL", "gemini-2.5-flash")
 
 # upper limit for text send to LLM
 # to prevent abnormally large text chunk (usually result from bugs)
@@ -37,7 +36,11 @@ def tag_with_llm(text: str) -> tuple[dict, int, float]:
             formatted_prompt = formatted_prompt[:MAX_TEXT_LENGTH]
 
         messages = [{"role": "user", "content": formatted_prompt}]
-        token_count = token_counter(model=model, messages=messages)
+
+        model = os.environ.get("TAGGING_MODEL", "")
+        if not model:
+            logger.error("TAGGING_MODEL environment variable is not set")
+            return {}, 0, 0.0
 
         response = completion(
             model=model,
@@ -45,7 +48,12 @@ def tag_with_llm(text: str) -> tuple[dict, int, float]:
             temperature=0,
         )
 
-        cost = completion_cost(completion_response=response)
+        if model.startswith("hosted_vllm/"):
+            cost = 0.0
+            token_count = token_counter(model="gpt-4o-mini", messages=messages)
+        else:
+            cost = completion_cost(completion_response=response)
+            token_count = token_counter(model=model, messages=messages)
 
         content = response.choices[0].message.content  # pyright: ignore
         result = _parse_md_json(content)  # pyright: ignore

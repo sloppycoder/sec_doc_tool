@@ -1,0 +1,19 @@
+# common settings
+CACHE_PREFIX=/Users/lee/Projects/git/edgar/sec_doc_tool/cache
+LOG_LEVEL=DEBUG
+
+# openai settings
+# TAGGING_MODEL=vertex_ai/gemini-2.5-flash
+# OPENAI_API_KEY=sk-xxx
+
+# vertex ai settings
+# TAGGING_MODEL=openai/gpt-4o-mini
+GOOGLE_APPLICATION_CREDENTIALS=edgar-ai-dev-41b230169553.json
+VERTEXAI_PROJECT=edgar-ai-dev
+VERTEXAI_LOCATION=us-central1
+GOOGLE_GENAI_USE_VERTEXAI=TRUE
+
+# hosted vLLM settings
+TAGGING_MODEL=hosted_vllm/meta-llama/Llama-3.1-8B-Instruct
+HOSTED_VLLM_API_KEY="whatever_is_set_on_server_side"
+HOSTED_VLLM_API_BASE="http://127.0.0.1:8000/v1"
