@@ -8,8 +8,11 @@
             "name": "Python: Current File",
             "type": "debugpy",
             "request": "launch",
-            "program": "${file}",
+            "module": "sec_doc_tool",
             "console": "integratedTerminal",
+            "args": [
+                "1002427/0001133228-24-004879"
+            ],
             "justMyCode": false
         },
         {
