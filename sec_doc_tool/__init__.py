@@ -25,7 +25,9 @@ class DocumentChunk(BaseModel):
     text: str
     html: str
     tags: dict[str, Any] = {}
-    _llm_cost: float = 0.0  # internal use only
+    # below are for internal use only
+    _llm_cost: float = 0.0
+    _llm_token_count: int = 0
 
     @property
     def is_tagged(self, source: str = "all") -> bool:
@@ -47,7 +49,7 @@ class DocumentChunk(BaseModel):
         tags = tag_with_ner(self.text)
         ner_tags = {f"ner/{k}": v for k, v in tags.items()}
 
-        tags, self._llm_cost = tag_with_llm(self.text)
+        tags, self._llm_token_count, self._llm_cost = tag_with_llm(self.text)
         llm_tags = {f"llm/{k}": v for k, v in tags.items()}
 
         self.tags = {**ner_tags, **llm_tags}
@@ -99,6 +101,14 @@ class ChunkedDocument(BaseModel):
         )
         self.chunks.append(chunk)
         return chunk
+
+    def tag_all_chunks(self):
+        llm_token_count, llm_cost = 0, 0.0
+        for chunk in self.chunks:
+            chunk.tag()
+            llm_token_count += chunk._llm_token_count
+            llm_cost += chunk._llm_cost
+        return llm_token_count, llm_cost
 
     @classmethod
     def init(

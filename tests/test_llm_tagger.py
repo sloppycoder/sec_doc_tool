@@ -11,5 +11,5 @@ def test_tag_with_llm():
     filing = ChunkedDocument.load("1002427", "0001133228-24-004879")
     assert filing
 
-    tags, _ = tag_with_llm(filing.chunks[10].text)
+    tags, _, _ = tag_with_llm(filing.chunks[10].text)
     assert tags and "Insight Fund" in tags["fund_names"]

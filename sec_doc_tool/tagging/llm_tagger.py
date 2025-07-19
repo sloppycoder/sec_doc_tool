@@ -1,10 +1,10 @@
 import json
 import logging
 import os
-from typing import cast
 
 from litellm import completion
 from litellm.cost_calculator import completion_cost
+from litellm.utils import token_counter
 
 from sec_doc_tool.tagging.llm_tagger_prompt import prompt
 
@@ -12,8 +12,13 @@ logger = logging.getLogger(__name__)
 
 model = os.environ.get("MODEL", "gemini-2.5-flash")
 
+# upper limit for text send to LLM
+# to prevent abnormally large text chunk (usually result from bugs)
+# to exceed API token limit or local server capacity
+MAX_TEXT_LENGTH = 4000
 
-def tag_with_llm(text: str) -> tuple[dict, float]:
+
+def tag_with_llm(text: str) -> tuple[dict, int, float]:
     """
     Use LiteLLM to get tags for a block of text.
 
@@ -21,29 +26,37 @@ def tag_with_llm(text: str) -> tuple[dict, float]:
         text: The text to analyze and tag
 
     Returns:
-        tuple[dict, float]: A tuple containing (tags dictionary, cost in dollars)
+        tuple[dict, float]: A tuple containing (tags dictionary, token count, cost in dollars)
     """
     try:
         formatted_prompt = prompt.replace("{TEXT_TO_TAG}", text)
+        if len(formatted_prompt) > MAX_TEXT_LENGTH:
+            logger.warning(
+                f"text chunk {len(formatted_prompt)} truncated. {formatted_prompt[:100]}"
+            )
+            formatted_prompt = formatted_prompt[:MAX_TEXT_LENGTH]
+
+        messages = [{"role": "user", "content": formatted_prompt}]
+        token_count = token_counter(model=model, messages=messages)
 
         response = completion(
             model=model,
-            messages=[{"role": "user", "content": formatted_prompt}],
+            messages=messages,
             temperature=0,
         )
 
         cost = completion_cost(completion_response=response)
-        content = cast(str, response.choices[0].message.content)  # type: ignore
-        result = _parse_md_json(content)
+
+        content = response.choices[0].message.content  # pyright: ignore
+        result = _parse_md_json(content)  # pyright: ignore
         if result:
-            return result, cost
+            return result, token_count, cost
         else:
             logger.warning(f"No JSON block found in LLM response: {content}")
-            return {}, 0.0
-
     except Exception as e:
         logger.error(f"Error in tag_with_llm: {e}")
-        return {}, 0.0
+
+    return {}, 00, 0.0
 
 
 def _parse_md_json(md: str) -> dict | None:
