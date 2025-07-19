@@ -105,10 +105,13 @@ class ChunkedDocument(BaseModel):
     def tag_all_chunks(self, limit: int = 999999):
         """parameter limit is for testing only"""
         llm_token_count, llm_cost = 0, 0.0
-        for chunk in self.chunks[:limit]:
+        for i, chunk in enumerate(self.chunks[:limit]):
             chunk.tag()
             llm_token_count += chunk._llm_token_count
             llm_cost += chunk._llm_cost
+            logger.info(
+                f"tagged {self.cik}/{self.accession_number} chunk {i} spent {llm_token_count} tokens costs {llm_cost}"
+            )
         return llm_token_count, llm_cost
 
     @classmethod
