@@ -22,7 +22,7 @@ def test_chunk_html_filing(mock_edgar_file, mock_file_content):
     trimmed_html = trim_html(filing_content)
     chunks = chunk_text(trimmed_html)
 
-    assert len(chunks) == 166
+    assert len(chunks) == 197
     assert all(chunk and len(chunk) > 10 for chunk in chunks)
 
 
@@ -43,7 +43,7 @@ def test_chunk_txt_filing(mock_edgar_file, mock_file_content):
 
     chunks = chunk_text(filing_content)
 
-    assert len(chunks) == 127
+    assert len(chunks) == 152
     assert all(chunk and len(chunk) > 10 for chunk in chunks)
 
 

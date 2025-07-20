@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_TEXT_CHUNK_SIZE = 3000
+DEFAULT_TEXT_CHUNK_SIZE = 2500
 
 # Lazy load SpaCy model only when needed
 _nlp_model = None
