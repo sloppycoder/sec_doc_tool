@@ -118,7 +118,6 @@ class TaggingResponseParser:
 
         # Pattern for bullet points with various formats
         patterns = [
-            r"-\s*\"(.*?)\":\s*(.*?)(?=\n|$)",  # - "tag": value
             r"-\s*\*\*(.*?)\*\*:\s*(.*?)(?=\n|$)",  # - **tag**: value
             r"-\s*(.*?):\s*(.*?)(?=\n|$)",  # - tag: value
             r"\*\s*(.*?):\s*(.*?)(?=\n|$)",  # * tag: value
@@ -137,6 +136,9 @@ class TaggingResponseParser:
                     tag_value = ""
 
                 tags[tag_name] = tag_value
+
+        # remove quotes and extra spaces from keys and values
+        tags = {k.strip(" \"'"): v.strip(" \"'") for k, v in tags.items()}
 
         return tags
 
