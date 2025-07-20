@@ -310,3 +310,27 @@ def _check_table_row(line: str) -> tuple[bool, bool]:
     )
 
     return True, is_cell_empty
+
+
+def add_context_from_neighbors(chunks: list[str], context_size: int = 500) -> list[str]:
+    """
+    Add context from neighboring chunks to each chunk.
+    """
+    if not chunks:
+        return chunks
+
+    # Create a new list to hold the updated chunks
+    updated_chunks = []
+
+    for i, chunk in enumerate(chunks):
+        # Get the surrounding context
+        prev_chunk = chunks[i - 1] if i > 0 else ""
+        next_chunk = chunks[i + 1] if i < len(chunks) - 1 else ""
+
+        # Combine the context with the current chunk
+        updated_chunk = (
+            f"{prev_chunk[-1 * context_size :]}\n\n{chunk}\n\n{next_chunk[:context_size]}"
+        )
+        updated_chunks.append(updated_chunk)
+
+    return updated_chunks

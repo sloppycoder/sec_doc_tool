@@ -5,8 +5,11 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from sec_doc_tool.chunking.html_splitter import split_html_by_pagebreak
-from sec_doc_tool.chunking.text_chunker import chunk_text
+from sec_doc_tool.chunking.text_chunker import (
+    add_context_from_neighbors,
+    chunk_text,
+    trim_html,
+)
 from sec_doc_tool.edgar import EdgarFiling
 from sec_doc_tool.file_cache import load_obj_from_cache, write_obj_to_cache
 from sec_doc_tool.tagging.llm_tagger import tag_with_api
@@ -145,11 +148,14 @@ class ChunkedDocument(BaseModel):
         doc_path, doc_content = doc_contents[0]
 
         if doc_path.endswith(".htm"):
-            html_chunks, text_chunks = split_html_by_pagebreak(doc_content)
+            text_chunks = chunk_text(trim_html(doc_content))
+            # html_chunks, text_chunks = split_html_by_pagebreak(doc_content)
         elif doc_path.endswith(".txt"):
-            html_chunks, text_chunks = [], chunk_text(doc_content)
+            text_chunks = chunk_text(doc_content)
         else:
             raise ValueError(f"Unsupported document type: {doc_path}")
+
+        text_chunks = add_context_from_neighbors(text_chunks)
 
         filing = ChunkedDocument(
             cik=cik,
@@ -160,7 +166,7 @@ class ChunkedDocument(BaseModel):
             filing.add_chunk(
                 i,
                 text=text_chunks[i],
-                html=html_chunks[i] if len(html_chunks) >= i else "",
+                html="",
             )
         filing._save()
 
