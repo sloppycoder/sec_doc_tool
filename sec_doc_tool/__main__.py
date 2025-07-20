@@ -43,17 +43,51 @@ def tag_filing(cik: str, accession_number: str):
 def parse_args(args):
     parser = argparse.ArgumentParser(description="SEC Document Tagging Tool")
     parser.add_argument(
-        "doc", nargs="?", help="cik/accession pair (e.g. 1002427/0001133228-24-004879)"
+        "doc",
+        nargs="?",
+        help="cik/accession pair (e.g. 1002427/0001133228-24-004879)",
     )
     parser.add_argument(
-        "-f", "--file", type=str, help="File containing cik/accession pairs, one per line"
+        "-f",
+        "--file",
+        type=str,
+        help="File containing cik/accession pairs, one per line",
     )
-    return parser.parse_args(args)
+    parser.add_argument(
+        "-m",
+        "--model",
+        type=str,
+        default="vertex_ai/gemini-2.5-flash",
+        help="Model to use for tagging",
+    )
+    parser.add_argument(
+        "--api-base",
+        type=str,
+        help="API base for hosted vLLM server",
+    )
+    parser.add_argument(
+        "--api-key",
+        type=str,
+        help="API key hosted vLLM server or OpenAI",
+    )
+    ns = parser.parse_args(args)
+    if ns.model:
+        os.environ["TAGGING_MODEL"] = ns.model
+
+    model = os.getenv("TAGGING_MODEL", "")
+    if model.startswith("hosted_vllm/"):
+        if ns.api_base:
+            os.environ["VLLM_API_BASE"] = ns.api_base
+        if ns.api_key:
+            os.environ["VLLM_API_KEY"] = ns.api_key
+    elif model.startswith("openai/"):
+        if ns.api_key:
+            os.environ["OPENAI_API_KEY"] = ns.api_key
+
+    return ns
 
 
 def get_doc_list(args):
-    args = parse_args(args)
-
     doc_list = []
     if args.file:
         try:
@@ -78,7 +112,9 @@ def get_doc_list(args):
 if __name__ == "__main__":
     init_logging()
 
-    doc_list = get_doc_list(sys.argv[1:])
+    args = parse_args(sys.argv[1:])
+
+    doc_list = get_doc_list(args)
     if len(doc_list) == 0:
         logger.error("No valid documents found.")
         sys.exit(1)

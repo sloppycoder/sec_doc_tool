@@ -1,16 +1,18 @@
 import shlex
 from pathlib import Path
 
-from sec_doc_tool.__main__ import get_doc_list
+from sec_doc_tool.__main__ import get_doc_list, parse_args
 
 
 def test_get_doc_list_single():
-    docs = get_doc_list(shlex.split("123/45567890-13-2333333"))
+    args = parse_args(shlex.split("123/45567890-13-2333333"))
+    docs = get_doc_list(args)
     assert docs[0] == ("123", "45567890-13-2333333")
 
 
 def test_get_doc_list_file():
     test_file = str(Path(__file__).parent / "mockdata/doc.lst")
-    docs = get_doc_list(shlex.split(f"--file {test_file}"))
+    args = parse_args(shlex.split(f"--file {test_file}"))
+    docs = get_doc_list(args)
     # Should exclude comments and blank lines
     assert len(docs) == 1 and docs[0] == ("123", "45567890-13-2333333")
