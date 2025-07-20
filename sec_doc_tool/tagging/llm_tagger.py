@@ -2,7 +2,7 @@ import json
 import logging
 import os
 
-from litellm import completion
+from litellm import batch_completion, completion
 from litellm.cost_calculator import completion_cost
 from litellm.utils import token_counter
 
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 MAX_TEXT_LENGTH = 4000
 
 
-def tag_with_llm(text: str) -> tuple[dict, int, float]:
+def tag_with_api(text: str) -> tuple[dict, int, float]:
     """
     Use LiteLLM to get tags for a block of text.
 
@@ -62,9 +62,84 @@ def tag_with_llm(text: str) -> tuple[dict, int, float]:
         else:
             logger.warning(f"No JSON block found in LLM response: {content}")
     except Exception as e:
-        logger.error(f"Error in tag_with_llm: {e}")
+        logger.error(f"Error in tag_with_api: {e}")
 
     return {}, 00, 0.0
+
+
+def batch_tag_with_api(
+    text_chunks: list[str], batch_size: int = 24
+) -> tuple[list[dict], int, float]:
+    """
+    Use LiteLLM to get tags for a batch of text chunks.
+
+    Args:
+        text_chunks: The list of text chunks to analyze and tag
+        batch_size: The number of chunks to process in parallel
+
+    Returns:
+        tuple[list[dict], int, float]: A tuple containing (list of tags dictionaries, total token count, total cost in dollars)
+    """
+    model = os.environ.get("TAGGING_MODEL", "")
+    if not model:
+        logger.error("TAGGING_MODEL environment variable is not set")
+        return [], 0, 0.0
+
+    results = []
+    token_count = 0
+    total_cost = 0.0
+
+    try:
+        all_messages = []
+        for text in text_chunks:
+            formatted_prompt = prompt.replace("{TEXT_TO_TAG}", text)
+            if len(formatted_prompt) > MAX_TEXT_LENGTH:
+                logger.warning(
+                    f"text chunk {len(formatted_prompt)} truncated. {formatted_prompt[:100]}"
+                )
+                formatted_prompt = formatted_prompt[:MAX_TEXT_LENGTH]
+            all_messages.append([{"role": "user", "content": formatted_prompt}])
+
+        for i in range(0, len(all_messages), batch_size):
+            messages = all_messages[i : i + batch_size]
+            responses = batch_completion(
+                model=model,
+                messages=messages,
+                temperature=0,
+            )
+
+            if model.startswith("hosted_vllm/"):
+                token_count += sum(
+                    [
+                        token_counter(model="gpt4o-mini", messages=messages)
+                        for messages in messages
+                    ]
+                )
+            else:
+                total_cost += sum(
+                    [
+                        completion_cost(completion_response=response)
+                        for response in responses
+                    ]
+                )
+                token_count += sum(
+                    [
+                        token_counter(model=model, messages=messages)
+                        for messages in messages
+                    ]
+                )
+
+            for response in responses:
+                content = response.choices[0].message.content  # pyright: ignore
+                result = _parse_md_json(content)  # pyright: ignore
+                results.append(result if result else {})
+
+        return results, token_count, total_cost
+
+    except Exception as e:
+        logger.error(f"Error in batch_tag_with_api: {e}")
+
+    return [], 0, 0.0
 
 
 def _parse_md_json(md: str) -> dict | None:

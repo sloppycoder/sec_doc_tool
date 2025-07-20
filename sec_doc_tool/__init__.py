@@ -9,7 +9,7 @@ from sec_doc_tool.chunking.html_splitter import split_html_by_pagebreak
 from sec_doc_tool.chunking.text_chunker import chunk_text
 from sec_doc_tool.edgar import EdgarFiling
 from sec_doc_tool.file_cache import load_obj_from_cache, write_obj_to_cache
-from sec_doc_tool.tagging.llm_tagger import tag_with_llm
+from sec_doc_tool.tagging.llm_tagger import tag_with_api
 from sec_doc_tool.tagging.text_tagger import tag_with_ner
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ class DocumentChunk(BaseModel):
         tags = tag_with_ner(self.text)
         ner_tags = {f"ner/{k}": v for k, v in tags.items()}
 
-        tags, self._llm_token_count, self._llm_cost = tag_with_llm(self.text)
+        tags, self._llm_token_count, self._llm_cost = tag_with_api(self.text)
         llm_tags = {f"llm/{k}": v for k, v in tags.items()}
 
         self.tags = {**ner_tags, **llm_tags}
