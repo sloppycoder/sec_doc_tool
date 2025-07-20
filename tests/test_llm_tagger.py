@@ -83,10 +83,14 @@ def test_batch_tag_with_api():
                 "timestsamp": datetime.now().isoformat(),
             }
 
+            tagged_chunks = [
+                list(row) for row in zip(chunk_nums, text_chunks, tag_results)
+            ]
+
             _append_test_result(
                 model=model.split("/")[-1],
                 filing_key=key,
-                tag_results=tag_results,
+                tagged_chunks=tagged_chunks,
                 meta=meta,
             )
 
@@ -94,7 +98,7 @@ def test_batch_tag_with_api():
 def _append_test_result(
     model,
     filing_key,
-    tag_results,
+    tagged_chunks,
     meta,
     filename=Path(__file__).parent.parent / "tmp/test_llm_tagger_results.json",
 ):
@@ -116,7 +120,7 @@ def _append_test_result(
     if filing_key not in data[model]:
         data[model][filing_key] = []
 
-    data[model][filing_key].append({"meta": meta, "tag_results": tag_results})
+    data[model][filing_key].append({"meta": meta, "tagged_chunks": tagged_chunks})
 
     with open(filename, "w") as f:
         json.dump(data, f, indent=2)
