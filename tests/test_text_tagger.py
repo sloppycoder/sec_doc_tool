@@ -6,5 +6,5 @@ def test_tag_with_ner():
     filing = ChunkedDocument.load("1002427", "0001133228-24-004879")
     assert filing
 
-    tags = tag_with_ner(filing.chunks[10].text)
-    assert tags and tags["person_unique"] > 5
+    tags = tag_with_ner(filing.chunks[258].text)
+    assert tags and tags["person_unique"] >= 16
