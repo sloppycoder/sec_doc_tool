@@ -22,13 +22,12 @@ Please add a few more tags if you find them relevant to the content of the snipp
 {TEXT_TO_TAG}
 </TEXT_TO_TAG>
 
-please make sure the return the result as markdown JSON block, as follows:
+use the below template for response, do NOT use JSON as output format
 
-```json
-{
-"summary": "the summary goes here",
-"tag1": "yes",
-"tag2": "no"
-}
-```
+Summary:
+<summary>
+
+Tags:
+- <tag1>: yes
+- <tag2>: no
 """

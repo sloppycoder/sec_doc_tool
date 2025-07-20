@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 
@@ -7,6 +6,7 @@ from litellm.cost_calculator import completion_cost
 from litellm.utils import token_counter
 
 from sec_doc_tool.tagging.llm_tagger_prompt import prompt
+from sec_doc_tool.tagging.parser import TaggingResponseParser
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 # to prevent abnormally large text chunk (usually result from bugs)
 # to exceed API token limit or local server capacity
 MAX_TEXT_LENGTH = 4000
+
+parser = TaggingResponseParser()
 
 
 def tag_with_api(text: str) -> tuple[dict, int, float]:
@@ -56,7 +58,7 @@ def tag_with_api(text: str) -> tuple[dict, int, float]:
             token_count = token_counter(model=model, messages=messages)
 
         content = response.choices[0].message.content  # pyright: ignore
-        result = _parse_md_json(content)  # pyright: ignore
+        result = parser.parse_response(content)  # pyright: ignore
         if result:
             return result, token_count, cost
         else:
@@ -131,7 +133,7 @@ def batch_tag_with_api(
 
             for response in responses:
                 content = response.choices[0].message.content  # pyright: ignore
-                result = _parse_md_json(content)  # pyright: ignore
+                result = parser.parse_response(content)  # pyright: ignore
                 results.append(result if result else {})
 
         return results, token_count, total_cost
@@ -140,18 +142,3 @@ def batch_tag_with_api(
         logger.error(f"Error in batch_tag_with_api: {e}")
 
     return [], 0, 0.0
-
-
-def _parse_md_json(md: str) -> dict | None:
-    """Parse a markdown string that contains a JSON block."""
-    start = md.find("```json")
-    if start == -1:
-        return None
-
-    start += len("```json")
-    end = md.find("```", start)
-    if end == -1:
-        return None
-
-    json_str = md[start:end].strip()
-    return json.loads(json_str)
