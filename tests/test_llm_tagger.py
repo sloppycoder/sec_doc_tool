@@ -61,7 +61,7 @@ def test_tag_with_api(model):
     )
 
 
-# @pytest.mark.skip(reason="for local testing only")
+@pytest.mark.skip(reason="for local testing only")
 def test_batch_tag_with_api():
     run_at = datetime.now().isoformat(sep=" ", timespec="seconds")
 

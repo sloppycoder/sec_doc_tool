@@ -110,17 +110,13 @@ def record_append_batch(
             chunk_num TEXT,
             tag TEXT,
             mandatory BOOLEAN,
+            val1 TEXT,
+            val2 TEXT,
+            val3 TEXT,
             PRIMARY KEY (batch_id, chunk_num, tag),
             FOREIGN KEY (batch_id) REFERENCES tagging_batches (id)
         )
     """)
-
-    # Check if model column exists, if not add it
-    cursor.execute("PRAGMA table_info(tagging_results)")
-    existing_columns = {row[1] for row in cursor.fetchall()}
-
-    if model_name not in existing_columns:
-        cursor.execute(f"ALTER TABLE tagging_results ADD COLUMN [{model_name}] TEXT")
 
     # Collect all rows to insert/update
     rows_to_process = []
@@ -153,7 +149,7 @@ def record_append_batch(
             cursor.execute(
                 f"""
                 UPDATE tagging_results
-                SET [{model_name}] = ?
+                SET {_model_name2column(model_name)} = ?
                 WHERE batch_id = ? AND chunk_num = ? AND tag = ?
             """,
                 (model_value, batch_id_val, chunk_num_val, tag_val),
@@ -162,7 +158,7 @@ def record_append_batch(
             # Insert new row
             cursor.execute(
                 f"""
-                INSERT INTO tagging_results (batch_id, chunk_num, tag, mandatory, [{model_name}])
+                INSERT INTO tagging_results (batch_id, chunk_num, tag, mandatory, {_model_name2column(model_name)})
                 VALUES (?, ?, ?, ?, ?)
             """,
                 (batch_id_val, chunk_num_val, tag_val, mandatory_val, model_value),
@@ -170,6 +166,16 @@ def record_append_batch(
 
     conn.commit()
     conn.close()
+
+
+def _model_name2column(model_name: str) -> str:
+    """Convert model name to a valid SQL column name."""
+    mapping = {
+        "gemini-2.5-flash": "val1",
+        "gpt-4o-mini": "val2",
+        "phi-4-mini-instruct": "val3",
+    }
+    return mapping[model_name.lower()]
 
 
 def _add_tag_result_rows(
@@ -241,7 +247,7 @@ def _add_tag_result_rows(
 def _add_meta_rows(batch_id: int, chunk_num: int, meta: dict, model_name: str):
     """Helper function to create rows for metadata."""
     rows = []
-    for meta_key in ["token_count", "cost", "text_size"]:
+    for meta_key in ["token_count", "cost", "text_size", "elapsed_time", "timestsamp"]:
         if meta_key in meta:
             rows.append(
                 {

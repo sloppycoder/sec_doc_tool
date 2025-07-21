@@ -31,3 +31,5 @@ Tags:
 - <tag1>: yes
 - <tag2>: no
 """
+
+_prompt_length = len(prompt) - len("{TEXT_TO_TAG}")
