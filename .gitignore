@@ -31,3 +31,4 @@ tmp/
 edgar*.json
 build/
 cache/
+*.db

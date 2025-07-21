@@ -108,6 +108,8 @@ This project is a comprehensive SEC EDGAR filing processing tool that downloads,
 Only generate comments for explaining algorithm or situation when the logic is not clear from the code.
 Do **NOT** generate comments for every line of code generated.
 
+**Function Organization**: Follow Python convention by placing public functions first, then private functions (prefixed with `_`) at the bottom of the file. This organizes code by visibility and importance.
+
 **IMPORTANT**: When working on this project, Claude Code must ALWAYS follow these steps after making any code changes:
 
 1. **Use pytest for test cases** do not use unittest in this project.

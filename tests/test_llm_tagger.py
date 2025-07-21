@@ -8,10 +8,12 @@ import pytest
 
 import sec_doc_tool.tagging.llm_tagger as llm_tagger
 from sec_doc_tool import ChunkedDocument
-from sec_doc_tool.utils import record_append_batch, record_tagging_batch
+from sec_doc_tool.utils import (
+    record_append_batch,
+    record_tagging_batch,
+)
 
-# output file for test results
-result_filename = str(Path(__file__).parent.parent / "tmp/test_llm_tagger_results.json")
+TEST_RESULT_DBPATH = str(Path(__file__).parent.parent / "test_results.db")
 
 sample_filings = {
     # Morgan Stanley Insight Fund
@@ -40,7 +42,7 @@ sample_filings = {
     [
         "vertex_ai/gemini-2.5-flash",
         "openai/gpt-4o-mini",
-        # "hosted_vllm/microsoft/Phi-4-mini-instruct",
+        "hosted_vllm/microsoft/Phi-4-mini-instruct",
     ],
 )
 @pytest.mark.skipif(socket.gethostname() != "uno.local", reason="for local testing only")
@@ -61,17 +63,19 @@ def test_tag_with_api(model):
 
 # @pytest.mark.skip(reason="for local testing only")
 def test_batch_tag_with_api():
-    batch_id = datetime.now().strftime("%m%d%H%M%S")
+    run_at = datetime.now().isoformat(sep=" ", timespec="seconds")
 
     for model in [
         "vertex_ai/gemini-2.5-flash",
-        # "openai/gpt-4o-mini",
+        "openai/gpt-4o-mini",
         # "hosted_vllm/microsoft/Phi-4-mini-instruct",
     ]:
         os.environ["TAGGING_MODEL"] = model
 
         for (cik, accessio_number), chunk_nums in sample_filings.items():
-            record_tagging_batch(batch_id, cik, accessio_number, chunk_nums)
+            batch_id = record_tagging_batch(
+                TEST_RESULT_DBPATH, cik, accessio_number, chunk_nums, run_at
+            )
 
             filing = ChunkedDocument.load(cik, accessio_number)
             assert filing
@@ -91,4 +95,10 @@ def test_batch_tag_with_api():
                 "timestsamp": datetime.now().isoformat(),
             }
 
-            record_append_batch(batch_id, tag_results, meta)
+            record_append_batch(
+                TEST_RESULT_DBPATH,
+                batch_id,
+                zip(chunk_nums, tag_results),
+                meta,
+                model.split("/")[-1],
+            )
