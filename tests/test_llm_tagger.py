@@ -1,4 +1,3 @@
-import json
 import os
 import socket
 import time
@@ -9,6 +8,10 @@ import pytest
 
 import sec_doc_tool.tagging.llm_tagger as llm_tagger
 from sec_doc_tool import ChunkedDocument
+from sec_doc_tool.utils import record_append_batch, record_tagging_batch
+
+# output file for test results
+result_filename = str(Path(__file__).parent.parent / "tmp/test_llm_tagger_results.json")
 
 sample_filings = {
     # Morgan Stanley Insight Fund
@@ -58,23 +61,28 @@ def test_tag_with_api(model):
 
 # @pytest.mark.skip(reason="for local testing only")
 def test_batch_tag_with_api():
+    batch_id = datetime.now().strftime("%m%d%H%M%S")
+
     for model in [
         "vertex_ai/gemini-2.5-flash",
-        "openai/gpt-4o-mini",
-        "hosted_vllm/microsoft/Phi-4-mini-instruct",
+        # "openai/gpt-4o-mini",
+        # "hosted_vllm/microsoft/Phi-4-mini-instruct",
     ]:
         os.environ["TAGGING_MODEL"] = model
 
         for (cik, accessio_number), chunk_nums in sample_filings.items():
+            record_tagging_batch(batch_id, cik, accessio_number, chunk_nums)
+
             filing = ChunkedDocument.load(cik, accessio_number)
             assert filing
 
             text_chunks = [filing.chunks[i].text for i in chunk_nums]
             text_size = sum(len(c) for c in text_chunks)
+
             start_t = time.time()
             tag_results, token_count, cost = llm_tagger.batch_tag_with_api(text_chunks)
             elasped_t = time.time() - start_t
-            key = f"{cik}/{accessio_number}"
+
             meta = {
                 "text_size": text_size,
                 "token_count": token_count,
@@ -83,44 +91,4 @@ def test_batch_tag_with_api():
                 "timestsamp": datetime.now().isoformat(),
             }
 
-            tagged_chunks = [
-                list(row) for row in zip(chunk_nums, text_chunks, tag_results)
-            ]
-
-            _append_test_result(
-                model=model.split("/")[-1],
-                filing_key=key,
-                tagged_chunks=tagged_chunks,
-                meta=meta,
-            )
-
-
-def _append_test_result(
-    model,
-    filing_key,
-    tagged_chunks,
-    meta,
-    filename=Path(__file__).parent.parent / "tmp/test_llm_tagger_results.json",
-):
-    """
-    Append tag_results to a JSON file under the model key, merging with existing content.
-    """
-    if os.path.exists(filename):
-        with open(filename, "r") as f:
-            try:
-                data = json.load(f)
-            except Exception:
-                data = {}
-    else:
-        data = {}
-
-    if model not in data:
-        data[model] = {}
-
-    if filing_key not in data[model]:
-        data[model][filing_key] = []
-
-    data[model][filing_key].append({"meta": meta, "tagged_chunks": tagged_chunks})
-
-    with open(filename, "w") as f:
-        json.dump(data, f, indent=2)
+            record_append_batch(batch_id, tag_results, meta)

@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import Any
 
 from litellm import batch_completion, completion
 from litellm.cost_calculator import completion_cost
@@ -71,7 +72,7 @@ def tag_with_api(text: str) -> tuple[dict, int, float]:
 
 def batch_tag_with_api(
     text_chunks: list[str], batch_size: int = 24
-) -> tuple[list[dict], int, float]:
+) -> tuple[list[dict[str, Any]], int, float]:
     """
     Use LiteLLM to get tags for a batch of text chunks.
 
