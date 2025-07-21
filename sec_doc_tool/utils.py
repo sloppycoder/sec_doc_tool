@@ -19,6 +19,7 @@ CREATE TABLE tagging_results (
     batch_id INTEGER,
     chunk_num TEXT,
     tag TEXT,
+    mandatory BOOLEAN,
     [model_columns] TEXT,
     PRIMARY KEY (batch_id, chunk_num, tag),
     FOREIGN KEY (batch_id) REFERENCES tagging_batches (id)
@@ -108,6 +109,7 @@ def record_append_batch(
             batch_id INTEGER,
             chunk_num TEXT,
             tag TEXT,
+            mandatory BOOLEAN,
             PRIMARY KEY (batch_id, chunk_num, tag),
             FOREIGN KEY (batch_id) REFERENCES tagging_batches (id)
         )
@@ -134,6 +136,7 @@ def record_append_batch(
         batch_id_val = row_data["batch_id"]
         chunk_num_val = row_data["chunk_num"]
         tag_val = row_data["tag"]
+        mandatory_val = row_data["mandatory"]
         model_value = row_data[model_name]
 
         # Check if row exists
@@ -159,10 +162,10 @@ def record_append_batch(
             # Insert new row
             cursor.execute(
                 f"""
-                INSERT INTO tagging_results (batch_id, chunk_num, tag, [{model_name}])
-                VALUES (?, ?, ?, ?)
+                INSERT INTO tagging_results (batch_id, chunk_num, tag, mandatory, [{model_name}])
+                VALUES (?, ?, ?, ?, ?)
             """,
-                (batch_id_val, chunk_num_val, tag_val, model_value),
+                (batch_id_val, chunk_num_val, tag_val, mandatory_val, model_value),
             )
 
     conn.commit()
@@ -200,6 +203,7 @@ def _add_tag_result_rows(
                         "batch_id": batch_id,
                         "chunk_num": str(chunk_num),
                         "tag": str(tag_name),
+                        "mandatory": True,
                         model_name: str(tag_value),
                     }
                 )
@@ -214,6 +218,7 @@ def _add_tag_result_rows(
                     "batch_id": batch_id,
                     "chunk_num": str(chunk_num),
                     "tag": "extras",
+                    "mandatory": False,
                     model_name: "; ".join(extras),
                 }
             )
@@ -225,6 +230,7 @@ def _add_tag_result_rows(
                 "batch_id": batch_id,
                 "chunk_num": str(chunk_num),
                 "tag": "summary",
+                "mandatory": True,
                 model_name: str(tag_result["summary"]),
             }
         )
@@ -242,6 +248,7 @@ def _add_meta_rows(batch_id: int, chunk_num: int, meta: dict, model_name: str):
                     "batch_id": batch_id,
                     "chunk_num": str(chunk_num),
                     "tag": f"_{meta_key}",
+                    "mandatory": False,
                     model_name: str(meta[meta_key]),
                 }
             )
