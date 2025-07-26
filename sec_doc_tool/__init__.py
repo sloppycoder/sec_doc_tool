@@ -6,53 +6,11 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from sec_doc_tool.chunking.html_splitter import split_html_by_pagebreak
-from sec_doc_tool.chunking.text_chunker import add_context_from_neighbors, chunk_text
+from sec_doc_tool.chunking.text_chunker import chunk_text, trim_html
 from sec_doc_tool.edgar import EdgarFiling
 from sec_doc_tool.file_cache import load_obj_from_cache, write_obj_to_cache
-from sec_doc_tool.tagging.text_tagger import tag_with_ner
 
 logger = logging.getLogger(__name__)
-
-
-MAX_CHUNK_SIZE = 2000
-
-
-class DocumentChunk(BaseModel):
-    cik: str
-    accession_number: str
-    num: int = Field(ge=0)
-    text: str
-    html: str
-    tags: dict[str, Any] = {}
-    # below are for internal use only
-    _llm_cost: float = 0.0
-    _llm_token_count: int = 0
-
-    @property
-    def is_tagged(self, source: str = "all") -> bool:
-        """
-        tags uses <source>/<tag_name> as key
-        """
-        if source is None or source == "":
-            return False
-
-        if source == "all":
-            return len(self.tags) > 0
-        else:
-            return any(k.startswith(f"{source}/") for k in self.tags)
-
-    def tag(self) -> dict[str, Any]:
-        """
-        Add tags to a specific chunk
-        """
-        tags = tag_with_ner(self.text)
-        ner_tags = {f"ner/{k}": v for k, v in tags.items()}
-
-        self.tags = ner_tags
-        logger.debug(
-            f"Tagged chunk {self.num} of filing {self.cik}/{self.accession_number} with {self.tags}"
-        )
-        return self.tags
 
 
 class ChunkedDocument(BaseModel):
@@ -63,7 +21,10 @@ class ChunkedDocument(BaseModel):
     cik: str
     accession_number: str
     date_filed: str
-    chunks: list[DocumentChunk] = []
+    html_pages: list[str] = []
+    text_chunks: list[str] = []
+    text_chunk_refs: list[int] = Field(default_factory=list)
+    chunk_tags: list[dict[str, Any]] = Field(default_factory=list)
 
     @classmethod
     def load(
@@ -84,32 +45,6 @@ class ChunkedDocument(BaseModel):
             logger.info(f"Failed to load ChunkedFiling from cache: {e}")
             return None
 
-    def add_chunk(self, num: int, text: str, html: str = "") -> DocumentChunk:
-        """
-        Add a chunk to the filing
-        """
-        chunk = DocumentChunk(
-            num=num,
-            text=text,
-            html=html,
-            cik=self.cik,
-            accession_number=self.accession_number,
-        )
-        self.chunks.append(chunk)
-        return chunk
-
-    def tag_all_chunks(self, limit: int = 999999):
-        """parameter limit is for testing only"""
-        llm_token_count, llm_cost = 0, 0.0
-        for i, chunk in enumerate(self.chunks[:limit]):
-            chunk.tag()
-            llm_token_count += chunk._llm_token_count
-            llm_cost += chunk._llm_cost
-            logger.info(
-                f"tagged {self.cik}/{self.accession_number} chunk {i} spent {llm_token_count} tokens costs {llm_cost}"
-            )
-        return llm_token_count, llm_cost
-
     @classmethod
     def init(
         cls,
@@ -128,7 +63,7 @@ class ChunkedDocument(BaseModel):
             )
             if obj:
                 logger.debug(
-                    f"Loaded ChunkedFiling({cik}/{accession_number}) with {len(obj.chunks)} chunks from cache"
+                    f"Loaded ChunkedFiling({cik}/{accession_number}) with {len(obj.text_chunks)} chunks from cache"
                 )
                 return obj
 
@@ -141,29 +76,35 @@ class ChunkedDocument(BaseModel):
         doc_path, doc_content = doc_contents[0]
 
         if doc_path.endswith(".htm"):
-            html_chunks, text_chunks = split_html_by_pagebreak(doc_content)
+            html_pages = split_html_by_pagebreak(doc_content)
+            text_chunks = []
+            page_refs = []
+            for i, page in enumerate(html_pages):
+                chunks = chunk_text(trim_html(page))
+                text_chunks.extend(chunks)
+                page_refs.append(i)
+
         elif doc_path.endswith(".txt"):
+            html_pages = []
+            page_refs = []
             text_chunks = chunk_text(doc_content)
         else:
             raise ValueError(f"Unsupported document type: {doc_path}")
 
-        text_chunks = add_context_from_neighbors(text_chunks)
+        # text_chunks = add_context_from_neighbors(text_chunks)
 
         filing = ChunkedDocument(
             cik=cik,
             accession_number=accession_number,
             date_filed=edgar_filing.date_filed,
+            html_pages=html_pages,
+            text_chunks=text_chunks,
+            text_chunk_refs=page_refs,
         )
-        for i in range(len(text_chunks)):
-            filing.add_chunk(
-                i,
-                text=text_chunks[i],
-                html="",
-            )
         # save the chunked filing to cache
         if filing._save():
             logger.debug(
-                f"Created new ChunkedFiling({cik}/{accession_number}) with {len(filing.chunks)}"
+                f"Created new ChunkedFiling({cik}/{accession_number}) with {len(filing.text_chunks)}"
             )
         else:
             logger.warning(

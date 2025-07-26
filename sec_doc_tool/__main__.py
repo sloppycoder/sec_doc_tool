@@ -2,11 +2,8 @@ import argparse
 import logging
 import os
 import sys
-import time
 
 from dotenv import load_dotenv
-
-from sec_doc_tool import ChunkedDocument
 
 load_dotenv()
 
@@ -24,20 +21,6 @@ def init_logging():
 
 
 logger = logging.getLogger(__name__)
-
-
-def tag_filing(cik: str, accession_number: str):
-    filing = ChunkedDocument.init(cik, accession_number)
-    if filing:
-        start_t = time.time()
-        llm_token_count, llm_cost = filing.tag_all_chunks()
-        elasped_t = time.time() - start_t
-        logger.info(
-            f"{cik}/{accession_number} tagged in {elasped_t:.1f} seconds, {len(filing.chunks)} chunks, {llm_token_count} tokens, ${llm_cost:.4f}"
-        )
-        filing._save()  # save the new tags
-    else:
-        logger.warning(f"{cik}/{accession_number} cannot be processed")
 
 
 def parse_args(args):
@@ -70,21 +53,7 @@ def parse_args(args):
         type=str,
         help="API key hosted vLLM server or OpenAI",
     )
-    ns = parser.parse_args(args)
-    if ns.model:
-        os.environ["TAGGING_MODEL"] = ns.model
-
-    model = os.getenv("TAGGING_MODEL", "")
-    if model.startswith("hosted_vllm/"):
-        if ns.api_base:
-            os.environ["VLLM_API_BASE"] = ns.api_base
-        if ns.api_key:
-            os.environ["VLLM_API_KEY"] = ns.api_key
-    elif model.startswith("openai/"):
-        if ns.api_key:
-            os.environ["OPENAI_API_KEY"] = ns.api_key
-
-    return ns
+    return parser.parse_args(args)
 
 
 def get_doc_list(args):
@@ -120,4 +89,4 @@ if __name__ == "__main__":
         sys.exit(1)
 
     for cik, accession_number in doc_list:
-        tag_filing(cik, accession_number)
+        print(f"{cik}/{accession_number}")

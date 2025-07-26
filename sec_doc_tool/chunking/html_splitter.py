@@ -46,9 +46,7 @@ def sanitize_text(text: str) -> str:
     return text
 
 
-def split_html_by_pagebreak(
-    html_content: str, marker: str = "-PAGE-BREAK-"
-) -> tuple[list[str], list[str]]:
+def split_html_by_pagebreak(html_content: str, marker: str = "-PAGE-BREAK-") -> list[str]:
     """
     Split html into chunks by using various types of page break marking.
 
@@ -61,13 +59,9 @@ def split_html_by_pagebreak(
 
     Returns:
         tuple: A tuple containing two lists:
-            - html_chunks: List of HTML content chunks split by page breaks.
-            - text_chunks: List of text content chunks corresponding to the HTML chunks.
+            - html_pages: List of HTML content pages split by page breaks.
     """
     html_chunks: list[str] = []
-    text_chunks: list[str] = []
-
-    h2t = init_html2text()
 
     processed_html = _preprocess_html_for_page_breaks(html_content, marker)
     soup = BeautifulSoup(processed_html, "html.parser")
@@ -76,8 +70,7 @@ def split_html_by_pagebreak(
     if not markers:
         # No page breaks found, treat entire content as one page
         html_chunks.append(html_content)
-        text_chunks.append(sanitize_text(h2t.handle(html_content)))
-        return html_chunks, text_chunks
+        return html_chunks
 
     # Get the root container (body if exists, otherwise the soup itself)
     container = soup.body if soup.body else soup
@@ -85,9 +78,8 @@ def split_html_by_pagebreak(
     for index, html_content, _ in _content_between_markers(html_string, markers):
         if html_content.strip():
             html_chunks.append(html_content)
-            text_chunks.append(sanitize_text(h2t.handle(html_content)))
 
-    return html_chunks, text_chunks
+    return html_chunks
 
 
 def _content_between_markers(
@@ -287,16 +279,3 @@ def _clean_html_fragment(html_fragment: str) -> str:
             if html_fragment.strip():
                 return f"<div>{html_fragment}</div>"
             return ""
-
-
-def init_html2text() -> html2text.HTML2Text:
-    """Configure html2text for clean output"""
-    h2t = html2text.HTML2Text()
-    h2t.ignore_links = False
-    h2t.ignore_images = True
-    h2t.body_width = 0
-    h2t.unicode_snob = True
-    h2t.escape_snob = True
-    h2t.single_line_break = False
-    h2t.mark_code = True
-    return h2t
