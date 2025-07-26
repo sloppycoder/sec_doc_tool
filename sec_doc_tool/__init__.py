@@ -5,14 +5,10 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from sec_doc_tool.chunking.text_chunker import (
-    add_context_from_neighbors,
-    chunk_text,
-    trim_html,
-)
+from sec_doc_tool.chunking.html_splitter import split_html_by_pagebreak
+from sec_doc_tool.chunking.text_chunker import add_context_from_neighbors, chunk_text
 from sec_doc_tool.edgar import EdgarFiling
 from sec_doc_tool.file_cache import load_obj_from_cache, write_obj_to_cache
-from sec_doc_tool.tagging.llm_tagger import tag_with_api
 from sec_doc_tool.tagging.text_tagger import tag_with_ner
 
 logger = logging.getLogger(__name__)
@@ -52,10 +48,7 @@ class DocumentChunk(BaseModel):
         tags = tag_with_ner(self.text)
         ner_tags = {f"ner/{k}": v for k, v in tags.items()}
 
-        tags, self._llm_token_count, self._llm_cost = tag_with_api(self.text)
-        llm_tags = {f"llm/{k}": v for k, v in tags.items()}
-
-        self.tags = {**ner_tags, **llm_tags}
+        self.tags = ner_tags
         logger.debug(
             f"Tagged chunk {self.num} of filing {self.cik}/{self.accession_number} with {self.tags}"
         )
@@ -148,8 +141,7 @@ class ChunkedDocument(BaseModel):
         doc_path, doc_content = doc_contents[0]
 
         if doc_path.endswith(".htm"):
-            text_chunks = chunk_text(trim_html(doc_content))
-            # html_chunks, text_chunks = split_html_by_pagebreak(doc_content)
+            html_chunks, text_chunks = split_html_by_pagebreak(doc_content)
         elif doc_path.endswith(".txt"):
             text_chunks = chunk_text(doc_content)
         else:
@@ -168,11 +160,16 @@ class ChunkedDocument(BaseModel):
                 text=text_chunks[i],
                 html="",
             )
-        filing._save()
+        # save the chunked filing to cache
+        if filing._save():
+            logger.debug(
+                f"Created new ChunkedFiling({cik}/{accession_number}) with {len(filing.chunks)}"
+            )
+        else:
+            logger.warning(
+                f"Failed to save ChunkedFiling({cik}/{accession_number}) to cache"
+            )
 
-        logger.debug(
-            f"Created new ChunkedFiling({cik}/{accession_number}) with {len(filing.chunks)}"
-        )
         return filing
 
     def _save(self) -> bool:
