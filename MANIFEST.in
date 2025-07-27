@@ -1,0 +1,8 @@
+# MANIFEST.in
+
+# Include only your main package directory and data files
+recursive-include sec_doc_tool *.py *.csv *.pickle
+
+# Exclude tests and tmp directories
+prune tests
+prune tmp

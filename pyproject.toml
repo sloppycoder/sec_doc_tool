@@ -19,8 +19,16 @@ dependencies = [
     "tenacity>=8.5.0",
 ]
 
+[tool.setuptools]
+include-package-data = true
+
 [tool.setuptools.packages.find]
 where = ["."]
+include = ["sec_doc_tool*"]
+exclude = ["tests", "tmp"]
+
+[tool.setuptools.package-data]
+"sec_doc_tool.catalog" = ["*.csv", "*.pickle"]
 
 [build-system]
 requires = ["setuptools>=42", "wheel"]
