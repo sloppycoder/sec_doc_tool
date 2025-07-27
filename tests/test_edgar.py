@@ -5,6 +5,7 @@ import pytest
 from sec_doc_tool.edgar import (
     EdgarFiling,
     _index_html_path,
+    load_filing_catalog,
     parse_idx_filename,
 )
 
@@ -57,3 +58,12 @@ def test_parse_old_485bpos_text(mock_edgar_file, mock_file_content):
     assert len(filing.documents) == 9
     assert html_path.endswith("file001.txt")
     assert html_content and "N-1A" in html_content
+
+
+def test_load_filing_catalog():
+    catalog = load_filing_catalog()
+    assert not catalog.empty, "Filing catalog should not be empty"
+    assert len(catalog) > 40000, "Filing catalog should have more than 40,000 entries"
+    min_year = catalog["date_filed"].min()[:4]
+    max_year = catalog["date_filed"].max()[:4]
+    assert min_year >= "2008" and max_year <= "2024"
