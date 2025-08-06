@@ -1,5 +1,6 @@
 import logging
 import re
+import unicodedata
 
 import html2text
 import spacy
@@ -12,6 +13,12 @@ DEFAULT_TEXT_CHUNK_SIZE = 2000
 
 # Lazy load SpaCy model only when needed
 _nlp_model = None
+
+# these characters in fund name will be removed
+# ™ 2122 trade mark
+# ® 00ae registered trade mark
+_chars_to_remove = "\u2122\u00ae"
+_translation_table = str.maketrans("", "", _chars_to_remove)
 
 
 def _get_nlp_model():
@@ -161,8 +168,10 @@ def chunk_text(content: str, chunk_size: int = DEFAULT_TEXT_CHUNK_SIZE) -> list[
     current_chunk = []
     current_size = 0
 
+    santized_content = _sanitize_text(content)
+
     # Split content into paragraphs (based on double newline)
-    paragraphs = content.split("\n\n")
+    paragraphs = santized_content.split("\n\n")
 
     for paragraph in paragraphs:
         # Detect potential tables by splitting into lines
@@ -312,25 +321,50 @@ def _check_table_row(line: str) -> tuple[bool, bool]:
     return True, is_cell_empty
 
 
-def add_context_from_neighbors(chunks: list[str], context_size: int = 500) -> list[str]:
-    """
-    Add context from neighboring chunks to each chunk.
-    """
-    if not chunks:
-        return chunks
+def _sanitize_text(text: str) -> str:
+    # 1. Normalize unicode (e.g. accented chars, homoglyphs)
+    text = unicodedata.normalize("NFKC", text)
 
-    # Create a new list to hold the updated chunks
-    updated_chunks = []
+    # 2. Replace various Unicode dashes with ASCII hyphen (-) and remove special symbols
+    text = re.sub(r"[‐‑‒–—−]", "-", text)  # noqa: RUF001 includes en-dash, em-dash, minus sign, etc.
+    text = text.translate(_translation_table)
 
-    for i, chunk in enumerate(chunks):
-        # Get the surrounding context
-        prev_chunk = chunks[i - 1] if i > 0 else ""
-        next_chunk = chunks[i + 1] if i < len(chunks) - 1 else ""
+    # 3. Remove invisible or control characters (except \n or \t optionally)
+    text = "".join(
+        c for c in text if not unicodedata.category(c).startswith("C") or c in "\n\t"
+    )
 
-        # Combine the context with the current chunk
-        updated_chunk = (
-            f"{prev_chunk[-1 * context_size :]}\n\n{chunk}\n\n{next_chunk[:context_size]}"
-        )
-        updated_chunks.append(updated_chunk)
+    # 4. Remove whitespace between dollar sign and number, e.g. "$ 100" → "$100"
+    text = re.sub(r"\$\s+(?=\d)", "$", text)
 
-    return updated_chunks
+    # 5. Normalize whitespace
+    text = re.sub(r"[ \t]+", " ", text)  # normalize horizontal whitespace
+    text = re.sub(r"\s*\n\s*", "\n", text)  # remove spaces around line breaks
+    text = re.sub(r"\n{2,}", "\n", text)  # collapse multiple line breaks
+    text = text.strip()
+
+    return text
+
+
+# def _add_context_from_neighbors(chunks: list[str], context_size: int = 500) -> list[str]:
+#     """
+#     Add context from neighboring chunks to each chunk.
+#     """
+#     if not chunks:
+#         return chunks
+
+#     # Create a new list to hold the updated chunks
+#     updated_chunks = []
+
+#     for i, chunk in enumerate(chunks):
+#         # Get the surrounding context
+#         prev_chunk = chunks[i - 1] if i > 0 else ""
+#         next_chunk = chunks[i + 1] if i < len(chunks) - 1 else ""
+
+#         # Combine the context with the current chunk
+#         updated_chunk = (
+#             f"{prev_chunk[-1 * context_size :]}\n\n{chunk}\n\n{next_chunk[:context_size]}"
+#         )
+#         updated_chunks.append(updated_chunk)
+
+#     return updated_chunks

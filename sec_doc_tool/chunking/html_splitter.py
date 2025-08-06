@@ -22,30 +22,6 @@ def log_selector_stats():
         logger.info(f"{str(v):33} <- {k}")
 
 
-def sanitize_text(text: str) -> str:
-    # 1. Normalize unicode (e.g. accented chars, homoglyphs)
-    text = unicodedata.normalize("NFKC", text)
-
-    # 2. Replace various Unicode dashes with ASCII hyphen (-)
-    text = re.sub(r"[‐‑‒–—−]", "-", text)  # noqa: RUF001 includes en-dash, em-dash, minus sign, etc.
-
-    # 3. Remove invisible or control characters (except \n or \t optionally)
-    text = "".join(
-        c for c in text if not unicodedata.category(c).startswith("C") or c in "\n\t"
-    )
-
-    # 4. Remove whitespace between dollar sign and number, e.g. "$ 100" → "$100"
-    text = re.sub(r"\$\s+(?=\d)", "$", text)
-
-    # 5. Normalize whitespace
-    text = re.sub(r"[ \t]+", " ", text)  # normalize horizontal whitespace
-    text = re.sub(r"\s*\n\s*", "\n", text)  # remove spaces around line breaks
-    text = re.sub(r"\n{2,}", "\n", text)  # collapse multiple line breaks
-    text = text.strip()
-
-    return text
-
-
 def split_html_by_pagebreak(html_content: str, marker: str = "-PAGE-BREAK-") -> list[str]:
     """
     Split html into chunks by using various types of page break marking.
