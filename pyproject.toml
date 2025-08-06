@@ -1,7 +1,7 @@
 [project]
 name = "sec_doc_tool"
-version = "0.1.0"
-description = "Cookiecutter template for generic Python 3 project with tooling configuration for testing, linting and IDE support"
+version = "0.2.0"
+description = "SEC document toolkit"
 authors = [{ name = "Li Lin", email = "guru.lin@gmail.com" }]
 readme = "README.md"
 
@@ -14,7 +14,6 @@ dependencies = [
     "pandas>=2.3.1",
     "python-dotenv >= 1.0.1",
     "pyyaml>=6.0.2",
-    "rank-bm25>=0.2.2",
     "spacy>=3.8.7",
     "tenacity>=8.5.0",
 ]
