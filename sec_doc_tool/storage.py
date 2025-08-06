@@ -51,10 +51,7 @@ def write_obj_to_storage(
     return False
 
 
-def delete_obj_from_storage(
-    obj_path: str,
-    obj: bytes,
-) -> bool:
+def delete_obj_from_storage(obj_path: str) -> bool:
     storage_prefix = _get_prefix()
     bucket_name, prefix = _storage_prefix(storage_prefix)
     if bucket_name:
