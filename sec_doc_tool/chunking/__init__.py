@@ -113,6 +113,17 @@ class ChunkedDocument(BaseModel):
 
         return filing
 
+    def get_chunk_with_context(self, chunk_index: int, context_size: int = 500) -> str:
+        """return chunk text along with context from prev and next chunks"""
+        curr_chunk = self.text_chunks[chunk_index]
+        prev_chunk = self.text_chunks[chunk_index - 1] if chunk_index > 0 else ""
+        next_chunk = (
+            self.text_chunks[chunk_index + 1]
+            if chunk_index < len(self.text_chunks) - 1
+            else ""
+        )
+        return f"{prev_chunk[-1 * context_size :]}\n\n{curr_chunk}\n\n{next_chunk[:context_size]}"
+
     def _save(self) -> bool:
         """
         Save the object to cache

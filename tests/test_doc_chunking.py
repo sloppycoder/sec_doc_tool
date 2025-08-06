@@ -9,3 +9,9 @@ def test_doc_chunking():
     # filing = ChunkedDocument.init("1000351", "0001387131-19-000505")
     assert filing and len(filing.text_chunks) == 514
     assert "Statement of Additional Information" in filing.text_chunks[164]
+
+    prev_context = filing.text_chunks[163][-100:]
+    next_context = filing.text_chunks[165][:100]
+    chunk_with_context = filing.get_chunk_with_context(164)
+    assert prev_context in chunk_with_context
+    assert next_context in chunk_with_context
