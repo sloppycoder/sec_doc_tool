@@ -8,27 +8,27 @@ from google.cloud import storage
 logger = logging.getLogger(__name__)
 
 
-def load_obj_from_storage(cache_file_path: str) -> bytes | None:
+def load_obj_from_storage(obj_path: str) -> bytes | None:
     storage_prefix = _get_prefix()
     bucket_name, prefix = _storage_prefix(storage_prefix)
     if bucket_name:
         # use GCS bucket
         bucket = _gcs_client().bucket(bucket_name)
-        blob = bucket.blob(f"{prefix}/{cache_file_path}")
+        blob = bucket.blob(f"{prefix}/{obj_path}")
         if blob.exists():
             return blob.download_as_bytes()
     else:
         # load from local file system
-        output_path = Path(prefix) / cache_file_path
+        output_path = Path(prefix) / obj_path
         if output_path.exists():
             with open(output_path, "rb") as f:
                 return f.read()
-    logger.debug(f"Cache miss: {cache_file_path}")
+    logger.debug(f"Not found in storage: {obj_path}")
     return None
 
 
 def write_obj_to_storage(
-    cache_file_path: str,
+    obj_path: str,
     obj: bytes,
 ) -> bool:
     storage_prefix = _get_prefix()
@@ -36,16 +36,42 @@ def write_obj_to_storage(
     if bucket_name:
         # use GCS bucket
         bucket = _gcs_client().bucket(bucket_name)
-        blob = bucket.blob(f"{prefix}/{cache_file_path}")
+        blob = bucket.blob(f"{prefix}/{obj_path}")
         blob.upload_from_string(obj)
+        logger.debug(f"Object written: {obj_path}")
         return True
     elif prefix and len(prefix) > 3:
         # save to local file system
-        output_path = Path(prefix) / cache_file_path
+        output_path = Path(prefix) / obj_path
         os.makedirs(output_path.parent, exist_ok=True)
         with open(output_path, "wb") as f:
             f.write(obj)
-        logger.debug(f"Cache written: {cache_file_path}")
+        logger.debug(f"Object written: {obj_path}")
+        return True
+    return False
+
+
+def delete_obj_from_storage(
+    obj_path: str,
+    obj: bytes,
+) -> bool:
+    storage_prefix = _get_prefix()
+    bucket_name, prefix = _storage_prefix(storage_prefix)
+    if bucket_name:
+        # use GCS bucket
+        bucket = _gcs_client().bucket(bucket_name)
+        blob = bucket.blob(f"{prefix}/{obj_path}")
+        blob.delete()
+        logger.debug("Object deleted: {obj_path}")
+        return True
+    elif prefix and len(prefix) > 3:
+        output_path = Path(prefix) / obj_path
+        if os.path.exists(output_path):
+            os.remove(output_path)
+            logger.debug("Object deleted: {obj_path}")
+        else:
+            logger.debug("Object not exist: {obj_path}")
+
         return True
     return False
 
