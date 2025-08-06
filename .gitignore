@@ -30,5 +30,6 @@ output/
 tmp/
 edgar*.json
 build/
-cache/
+/cache/
+extracted_texts/
 *.db
