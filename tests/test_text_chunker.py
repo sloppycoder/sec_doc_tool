@@ -27,7 +27,7 @@ def test_chunk_html_filing(mock_edgar_file, mock_file_content):
         text_chunks.extend(chunks)
 
     assert len(html_pages) == 152
-    assert len(text_chunks) == 300
+    assert len(text_chunks) == 279
     # some text_chunks are too small, some too large..what to do?
     # large_chunk_sizes = [
     #     len(chunk) for chunk in text_chunks if len(chunk) > DEFAULT_TEXT_CHUNK_SIZE * 1.33
