@@ -3,30 +3,21 @@ import re
 import unicodedata
 
 import html2text
-import spacy
 from bs4 import BeautifulSoup
+
+from ..nlp_model import get_nlp_model
 
 logger = logging.getLogger(__name__)
 
 
 DEFAULT_TEXT_CHUNK_SIZE = 2000
 
-# Lazy load SpaCy model only when needed
-_nlp_model = None
 
 # these characters in fund name will be removed
 # ™ 2122 trade mark
 # ® 00ae registered trade mark
 _chars_to_remove = "\u2122\u00ae"
 _translation_table = str.maketrans("", "", _chars_to_remove)
-
-
-def _get_nlp_model():
-    """Lazy load SpaCy model"""
-    global _nlp_model
-    if _nlp_model is None:
-        _nlp_model = spacy.load("en_core_web_sm")
-    return _nlp_model
 
 
 def _needs_sentence_splitting(line: str) -> bool:
@@ -68,7 +59,7 @@ def _batch_process_lines(lines: list[str]) -> dict[str, list[str]]:
     if not lines:
         return {}
 
-    nlp = _get_nlp_model()
+    nlp = get_nlp_model()
 
     # Create a mapping to track which sentences belong to which lines
     line_markers = []

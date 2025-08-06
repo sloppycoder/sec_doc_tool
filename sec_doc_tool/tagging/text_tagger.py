@@ -2,7 +2,7 @@
 
 import re
 
-import spacy
+from ..nlp_model import get_nlp_model
 
 MANAGER_JOB_PATTERNS = [
     r"\bportfolio manager\b",
@@ -19,9 +19,6 @@ TRUSTEE_JOB_PATTERNS = [
     r"\bchairman of .* committee\b",
 ]
 TRUSTEE_REGEX = re.compile("|".join(TRUSTEE_JOB_PATTERNS), re.I)
-
-
-nlp = spacy.load("en_core_web_sm")
 
 
 DOLLAR_RANGES = [
@@ -67,6 +64,7 @@ def _unique_money_entities(doc) -> set[str]:
 
 
 def tag_with_ner(text: str) -> dict:
+    nlp = get_nlp_model()
     doc = nlp(text)
     persons = _unique_person_entities(doc)
     money = _unique_money_entities(doc)
