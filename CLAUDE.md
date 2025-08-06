@@ -31,7 +31,7 @@ pytest --cov=. --cov-report=html
 
 ## Architecture Overview
 
-This project is a comprehensive SEC EDGAR filing processing tool that downloads, parses, chunks, and analyzes financial documents using NLP and AI techniques.
+This project is a comprehensive SEC EDGAR filing processing tool that downloads, parses, chunks, and analyzes financial documents using NLP techniques.
 
 ### Core Components
 
@@ -40,7 +40,8 @@ This project is a comprehensive SEC EDGAR filing processing tool that downloads,
 - Downloads filings from SEC EDGAR database using requests with rate limiting
 - Parses index-headers.html and index.html files to extract document metadata
 - Handles different document types (485BPOS, HTML, TXT files)
-- Implements caching layer for downloaded content
+- Implements retry logic with exponential backoff for rate limiting
+- Supports filtering by filing catalog with interested CIK lists
 
 #### 2. Document Chunking (`sec_doc_tool/chunking/`)
 - **HTML Splitter** (`html_splitter.py`): Splits HTML documents by page breaks
@@ -52,47 +53,55 @@ This project is a comprehensive SEC EDGAR filing processing tool that downloads,
   - Handles tables, headers, and structured content
   - Batch processing for performance optimization
   - Configurable chunk size (default: 3000 characters)
+- **ChunkedDocument** (`chunking/__init__.py`): Pydantic model for processed documents
+  - Automatic persistence and caching of chunked documents
+  - Lazy loading from cache to avoid reprocessing
+  - Supports both HTML and TXT document types
 
-#### 3. Content Analysis & Tagging (`sec_doc_tool/tagging/`)
+#### 3. Text Extraction (`sec_doc_tool/text_extractor.py`)
+- **TextExtractor class**: Extracts relevant text segments containing fund names
+- **Context Detection**: Classifies text as narrative, table, header, list, or parenthetical
+- **Sentence/Paragraph Extraction**: Uses spaCy for intelligent text segmentation
+- **Quality Scoring**: Calculates quality scores for extracted text segments
+- **Multiprocessing Support**: Worker functions for batch processing
+- **Caching**: Saves extracted text results to avoid reprocessing
+
+#### 4. Content Analysis & Tagging (`sec_doc_tool/tagging/`)
 - **NER Tagger** (`text_tagger.py`): Named Entity Recognition using spaCy
   - Identifies persons, monetary amounts, job titles
   - Counts managers, trustees, and financial ranges
   - Pattern matching for specific financial document entities
-- **LLM Tagger** (`llm_tagger.py`): AI-powered content analysis
-  - Uses LiteLLM for multi-provider LLM integration
-  - Supports various models (default: gemini-2.5-flash)
-  - Structured JSON output with cost tracking
 
-#### 4. Caching System (`sec_doc_tool/file_cache.py`)
+#### 5. NLP Model Management (`sec_doc_tool/nlp_model.py`)
+- **Lazy Loading**: Global spaCy model instance with fallback support
+- **Model Priority**: Prefers en_core_web_lg, falls back to en_core_web_sm
+- **Singleton Pattern**: Ensures single model instance per process
+
+#### 6. Caching System (`sec_doc_tool/file_cache.py`)
 - **Dual storage support**: Local filesystem and Google Cloud Storage
 - **Configurable via environment**: `CACHE_PREFIX` determines storage location
 - **Automatic fallback**: GCS → local file → download from source
-- **Pickle-based serialization** for complex objects
-
-#### 5. Document Management (`sec_doc_tool/__init__.py`)
-- **ChunkedDocument**: Pydantic model for processed documents
-- **DocumentChunk**: Individual text segments with metadata and tags
-- **Automatic persistence**: Saves processed documents to cache
-- **Lazy loading**: Loads from cache before reprocessing
+- **Binary serialization**: Supports various data formats including JSON and pickle
 
 ### Data Flow
 
 1. **Input**: CIK (Central Index Key) and Accession Number
 2. **Download**: Fetch filing from SEC EDGAR via `EdgarFiling`
 3. **Parse**: Extract document content and metadata
-4. **Chunk**: Split into manageable segments using appropriate splitter
-5. **Tag**: Apply NER and LLM analysis to each chunk
-6. **Cache**: Store processed results for future use
-7. **Output**: Structured `ChunkedDocument` with analyzed content
+4. **Chunk**: Split into manageable segments using HTML splitter or text chunker
+5. **Extract**: Use `TextExtractor` to find fund-specific text segments
+6. **Tag**: Apply NER analysis using spaCy for entity recognition
+7. **Cache**: Store processed results (documents, chunks, extracted texts)
+8. **Output**: Structured data models with analyzed content
 
 ### Key Technologies
 
 - **Web Scraping**: requests, BeautifulSoup, tenacity (retry logic)
-- **NLP**: spaCy (en_core_web_sm), html2text
-- **AI Integration**: LiteLLM (supports OpenAI, Google, Anthropic models)
-- **Data Validation**: Pydantic models
+- **NLP**: spaCy (en_core_web_lg/sm), html2text
+- **Data Validation**: Pydantic models with JSON serialization
 - **Storage**: Google Cloud Storage, local filesystem
 - **Testing**: pytest with comprehensive test coverage
+- **Multiprocessing**: Support for batch document processing
 
 
 ## Configuration
@@ -101,6 +110,7 @@ This project is a comprehensive SEC EDGAR filing processing tool that downloads,
 - `pyrightconfig.json`: Type checker configuration
 - Environment variables loaded from `.env` file via `python-dotenv`
 - Logging level controlled by `LOG_LEVEL` environment variable
+- Cache storage determined by `CACHE_PREFIX` environment variable
 
 
 ## Claude Code Instructions
