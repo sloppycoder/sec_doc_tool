@@ -12,7 +12,7 @@ import requests
 from bs4 import BeautifulSoup
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-from sec_doc_tool.file_cache import load_obj_from_cache, write_obj_to_cache
+from .storage import load_obj_from_storage, write_obj_to_storage
 
 logger = logging.getLogger(__name__)
 
@@ -266,14 +266,14 @@ def edgar_file(
     """
     # Check if file exists in cache
     cache_file_path = f"edgar/Archives/{idx_filename}"
-    obj = load_obj_from_cache(cache_file_path)
+    obj = load_obj_from_storage(cache_file_path)
     if obj:
         return obj.decode("utf-8")
 
     # Download from EDGAR if not in cache
     content = _edgar_file(idx_filename, user_agent)
     if content:
-        write_obj_to_cache(cache_file_path, content.encode("utf-8"))
+        write_obj_to_storage(cache_file_path, content.encode("utf-8"))
 
     return content
 

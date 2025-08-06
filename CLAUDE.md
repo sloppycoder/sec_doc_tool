@@ -77,11 +77,10 @@ This project is a comprehensive SEC EDGAR filing processing tool that downloads,
 - **Model Priority**: Prefers en_core_web_lg, falls back to en_core_web_sm
 - **Singleton Pattern**: Ensures single model instance per process
 
-#### 6. Caching System (`sec_doc_tool/file_cache.py`)
+#### 6. Storage System (`sec_doc_tool/storage.py`) used as cache
 - **Dual storage support**: Local filesystem and Google Cloud Storage
-- **Configurable via environment**: `CACHE_PREFIX` determines storage location
+- **Configurable via environment**: `STORAGE_PREFIX` determines storage location
 - **Automatic fallback**: GCS → local file → download from source
-- **Binary serialization**: Supports various data formats including JSON and pickle
 
 ### Data Flow
 

@@ -6,7 +6,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from ..edgar import EdgarFiling
-from ..file_cache import load_obj_from_cache, write_obj_to_cache
+from ..storage import load_obj_from_storage, write_obj_to_storage
 from .html_splitter import split_html_by_pagebreak
 from .text_chunker import chunk_text, trim_html
 
@@ -38,7 +38,7 @@ class ChunkedDocument(BaseModel):
         """
         try:
             cache_file_path = f"chunked_filing/{cik}/{accession_number}.json"
-            data = load_obj_from_cache(cache_file_path)
+            data = load_obj_from_storage(cache_file_path)
             if data:
                 return ChunkedDocument.model_validate_json(data)
         except Exception as e:
@@ -121,7 +121,7 @@ class ChunkedDocument(BaseModel):
         try:
             cache_file_path = f"chunked_filing/{self.cik}/{self.accession_number}.json"
             data = self.model_dump_json()
-            return write_obj_to_cache(cache_file_path, data.encode("utf-8"))
+            return write_obj_to_storage(cache_file_path, data.encode("utf-8"))
         except Exception as e:
             logger.error(f"Failed to save ChunkedFiling to cache: {e}")
             return False

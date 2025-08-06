@@ -6,7 +6,8 @@ from typing import Any
 import spacy
 from pydantic import BaseModel, Field
 
-from . import ChunkedDocument, load_obj_from_cache, write_obj_to_cache
+from . import ChunkedDocument
+from .storage import load_obj_from_storage, write_obj_to_storage
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +102,7 @@ class TextExtractor:
 
             # Use sec_doc_tool.file_utils to write cache
             cache_file_path = self._get_cache_file_path(cache_key)
-            success = write_obj_to_cache(cache_file_path, json_bytes)
+            success = write_obj_to_storage(cache_file_path, json_bytes)
             if not success:
                 logger.warning(f"Failed to write cache for key {cache_key}")
 
@@ -123,7 +124,7 @@ class TextExtractor:
         try:
             # Use sec_doc_tool.file_utils to load cache
             cache_file_path = self._get_cache_file_path(cache_key)
-            json_bytes = load_obj_from_cache(cache_file_path)
+            json_bytes = load_obj_from_storage(cache_file_path)
             if json_bytes is None:
                 return None
 
