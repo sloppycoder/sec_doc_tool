@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(pytest:*)",
-      "Bash(ruff check:*)"
+      "Bash(ruff check:*)",
+      "WebFetch(domain:docs.github.com)"
     ],
     "deny": []
   }
