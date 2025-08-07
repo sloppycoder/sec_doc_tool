@@ -30,6 +30,10 @@ on:
 
   workflow_dispatch:
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   pytest:
     runs-on: ubuntu-latest
@@ -58,3 +62,44 @@ jobs:
         id: unit_tests
         run: |
           uv run pytest -v -s
+
+  build-and-publish:
+    needs: pytest
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/rel-'))
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "0.7.19"
+          enable-cache: true
+
+      - name: Install Python using uv
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: |
+          uv sync
+          uv add --dev twine
+
+      - name: Build wheel
+        run: |
+          uv build
+
+      - name: Publish to GitHub Releases
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/rel-')
+        with:
+          files: dist/*
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Upload to GitHub Packages (alternative approach)
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/rel-')
+        run: |
+          echo "For GitHub Packages Python support, configure .pypirc with GitHub URL"
+          echo "Wheel built and available in dist/ directory"
+          echo "Consider publishing to PyPI instead using:"
+          echo "  uv run twine upload dist/* --repository-url https://upload.pypi.org/legacy/"
