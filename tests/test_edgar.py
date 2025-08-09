@@ -62,8 +62,8 @@ def test_parse_old_485bpos_text(mock_edgar_file, mock_file_content):
 
 def test_load_filing_catalog():
     catalog = load_filing_catalog()
-    assert not catalog.empty, "Filing catalog should not be empty"
-    assert len(catalog) > 40000, "Filing catalog should have more than 40,000 entries"
-    min_year = catalog["date_filed"].min()[:4]
-    max_year = catalog["date_filed"].max()[:4]
-    assert min_year >= "2008" and max_year <= "2024"
+    assert len(catalog) > 0, "Filing catalog should not be empty"
+    assert len(catalog) == 41969, "Filing catalog should have have 41,969 entries"
+    min_year = str(catalog["date_filed"].min())[:4]
+    max_year = str(catalog["date_filed"].max())[:4]
+    assert min_year == "2008" and max_year == "2024"

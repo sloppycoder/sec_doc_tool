@@ -7,7 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-import pandas as pd
+import polars as pl
 import requests
 from bs4 import BeautifulSoup
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
@@ -290,18 +290,18 @@ def _index_html_path(idx_filename: str) -> str:
 
 
 @lru_cache(maxsize=1)
-def load_filing_catalog() -> pd.DataFrame:
+def load_filing_catalog() -> pl.DataFrame:
     """
     load local copy of 485BPOS filings catalog, filtered by interested CIKs
     """
     data_path = Path(__file__).parent / "catalog"
-    df_filings = pd.read_pickle(data_path / "all_485bpos_pd.pickle")
+    df_filings = pl.read_parquet(data_path / "all_485bpos_pl.parquet")
     assert len(df_filings) > 10000
 
-    df_cik = pd.read_csv(data_path / "interested_cik_list.csv")
+    df_cik = pl.read_csv(data_path / "interested_cik_list.csv")
     assert len(df_cik) > 1000
 
     # Filter rows by date range and by interested CIK list
-    interested_ciks = df_cik["cik"].astype(str).tolist()
-    df_result = df_filings[(df_filings["cik"].isin(interested_ciks))]
+    interested_ciks = df_cik["cik"].cast(pl.String).to_list()
+    df_result = df_filings.filter(pl.col("cik").is_in(interested_ciks))
     return df_result
