@@ -1,6 +1,6 @@
 [project]
 name = "sec_doc_tool"
-version = "0.2.1"
+version = "0.2.2"
 description = "SEC document toolkit"
 authors = [{ name = "Li Lin", email = "guru.lin@gmail.com" }]
 readme = "README.md"
