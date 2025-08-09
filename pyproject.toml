@@ -26,7 +26,7 @@ include = ["sec_doc_tool*"]
 exclude = ["tests", "tmp"]
 
 [tool.setuptools.package-data]
-"sec_doc_tool.catalog" = ["*.csv", "*.pickle"]
+"sec_doc_tool.catalog" = ["*.csv", "*.parquet"]
 
 [build-system]
 requires = ["setuptools>=42", "wheel"]
