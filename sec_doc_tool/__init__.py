@@ -4,7 +4,7 @@ from .chunking import ChunkedDocument
 from .edgar import EdgarFiling
 from .nlp_model import get_nlp_model
 from .storage import delete_obj_from_storage, load_obj_from_storage, write_obj_to_storage
-from .text_extractor import ExtractedText, TextExtractor
+from .text_utils.text_extractor import ExtractedText, TextExtractor
 
 __all__ = [
     "EdgarFiling",
