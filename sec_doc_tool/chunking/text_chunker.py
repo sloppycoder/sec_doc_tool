@@ -1,23 +1,19 @@
 import logging
 import re
-import unicodedata
 
 import html2text
 from bs4 import BeautifulSoup
 
 from ..nlp_model import get_nlp_model
+from ..text_utils import TextNormalizer
 
 logger = logging.getLogger(__name__)
 
 
 DEFAULT_TEXT_CHUNK_SIZE = 2000
 
-
-# these characters in fund name will be removed
-# ™ 2122 trade mark
-# ® 00ae registered trade mark
-_chars_to_remove = "\u2122\u00ae"
-_translation_table = str.maketrans("", "", _chars_to_remove)
+# Create a global text normalizer instance
+_text_normalizer = TextNormalizer()
 
 
 def _needs_sentence_splitting(line: str) -> bool:
@@ -159,10 +155,10 @@ def chunk_text(content: str, chunk_size: int = DEFAULT_TEXT_CHUNK_SIZE) -> list[
     current_chunk = []
     current_size = 0
 
-    santized_content = _sanitize_text(content)
+    sanitized_content = _text_normalizer.sanitize_document_text(content)
 
     # Split content into paragraphs (based on double newline)
-    paragraphs = santized_content.split("\n\n")
+    paragraphs = sanitized_content.split("\n\n")
 
     for paragraph in paragraphs:
         # Detect potential tables by splitting into lines
@@ -310,28 +306,3 @@ def _check_table_row(line: str) -> tuple[bool, bool]:
     )
 
     return True, is_cell_empty
-
-
-def _sanitize_text(text: str) -> str:
-    # 1. Normalize unicode (e.g. accented chars, homoglyphs)
-    text = unicodedata.normalize("NFKC", text)
-
-    # 2. Replace various Unicode dashes with ASCII hyphen (-) and remove special symbols
-    text = re.sub(r"[‐‑‒–—−]", "-", text)  # noqa: RUF001 includes en-dash, em-dash, minus sign, etc.
-    text = text.translate(_translation_table)
-
-    # 3. Remove invisible or control characters (except \n or \t optionally)
-    text = "".join(
-        c for c in text if not unicodedata.category(c).startswith("C") or c in "\n\t"
-    )
-
-    # 4. Remove whitespace between dollar sign and number, e.g. "$ 100" → "$100"
-    text = re.sub(r"\$\s+(?=\d)", "$", text)
-
-    # 5. Normalize whitespace
-    text = re.sub(r"[ \t]+", " ", text)  # normalize horizontal whitespace
-    text = re.sub(r"\s*\n\s*", "\n", text)  # remove spaces around line breaks
-    text = re.sub(r"\n{2,}", "\n", text)  # collapse multiple line breaks
-    text = text.strip()
-
-    return text

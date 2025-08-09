@@ -6,6 +6,7 @@ specifically designed for SEC document text processing.
 """
 
 import re
+import unicodedata
 
 
 class TextNormalizer:
@@ -18,6 +19,11 @@ class TextNormalizer:
     - Special characters and punctuation
     - Multiple consecutive spaces
     """
+
+    def __init__(self):
+        # Translation table for removing trademark and registered symbols
+        chars_to_remove = "\u2122\u00ae"  # ™ ®
+        self._translation_table = str.maketrans("", "", chars_to_remove)
 
     def normalize(self, text: str) -> str:
         """
@@ -108,3 +114,51 @@ class TextNormalizer:
         """
         normalized = self.normalize(text)
         return len(normalized) >= min_length
+
+    def sanitize_document_text(self, text: str) -> str:
+        """
+        Sanitize document text while preserving document structure.
+
+        Similar to normalize() but preserves line breaks and is more
+        suited for document chunking rather than entity comparison.
+
+        Handles:
+        - Unicode normalization (NFKC)
+        - Unicode dashes and special symbols
+        - Control characters
+        - Whitespace normalization
+        - Dollar sign formatting
+
+        Args:
+            text: Raw document text
+
+        Returns:
+            Sanitized text with preserved structure
+        """
+        if not text:
+            return ""
+
+        # 1. Normalize unicode (e.g. accented chars, homoglyphs)
+        text = unicodedata.normalize("NFKC", text)
+
+        # 2. Replace various Unicode dashes with ASCII hyphen (-)
+        text = re.sub(r"[‐‑‒–—−]", "-", text)  # noqa: RUF001
+
+        # 3. Remove trademark and registered symbols
+        text = text.translate(self._translation_table)
+
+        # 4. Remove invisible or control characters (except \n or \t)
+        text = "".join(
+            c for c in text if not unicodedata.category(c).startswith("C") or c in "\n\t"
+        )
+
+        # 5. Remove whitespace between dollar sign and number, e.g. "$ 100" → "$100"
+        text = re.sub(r"\$\s+(?=\d)", "$", text)
+
+        # 6. Normalize whitespace while preserving line structure
+        text = re.sub(r"[ \t]+", " ", text)  # normalize horizontal whitespace
+        text = re.sub(r"\s*\n\s*", "\n", text)  # remove spaces around line breaks
+        text = re.sub(r"\n{2,}", "\n", text)  # collapse multiple line breaks
+        text = text.strip()
+
+        return text
