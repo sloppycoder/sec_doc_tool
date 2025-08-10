@@ -101,7 +101,7 @@ class TextNormalizer:
 
         return self.normalize(cleaned)
 
-    def is_meaningful_text(self, text: str, min_length: int = 2) -> bool:
+    def is_meaningful_text(self, text: str, min_length: int = 3) -> bool:
         """
         Check if normalized text is meaningful (not empty/whitespace after normalization).
 
