@@ -349,7 +349,7 @@ class TextExtractor:
         document: ChunkedDocument,
         extract_sentences: bool = True,
         extract_paragraphs: bool = True,
-        use_cache: bool = False,
+        use_cache: bool = True,
     ) -> list[ExtractedText]:
         """
         Extract text segments containing entity names from a ChunkedDocument
