@@ -349,6 +349,7 @@ class TextExtractor:
         document: ChunkedDocument,
         extract_sentences: bool = True,
         extract_paragraphs: bool = True,
+        use_cache: bool = False,
     ) -> list[ExtractedText]:
         """
         Extract text segments containing entity names from a ChunkedDocument
@@ -357,6 +358,7 @@ class TextExtractor:
             document: ChunkedDocument to process
             extract_sentences: Whether to extract sentences
             extract_paragraphs: Whether to extract paragraphs
+            use_cache: If False, bypass cache load/write logic. Defaults to True.
 
         Returns:
             List of ExtractedText objects
@@ -365,18 +367,18 @@ class TextExtractor:
         cache_key = self._generate_cache_key(document)
 
         # Try to load from cache first
-        cached_results = self._load_extracted_texts_from_cache(cache_key)
-        if cached_results is not None:
-            logger.info(
-                f"Loaded cached results for {document.cik}/{document.accession_number}: "
-                f"{len(cached_results)} segments"
-            )
-            return cached_results
+        if use_cache:
+            cached_results = self._load_extracted_texts_from_cache(cache_key)
+            if cached_results is not None:
+                logger.info(
+                    f"Loaded cached results for {document.cik}/{document.accession_number}: "
+                    f"{len(cached_results)} segments"
+                )
+                return cached_results
 
-        # Cache miss - perform extraction
         logger.info(
-            f"Cache miss for {document.cik}/{document.accession_number}, "
-            f"performing extraction"
+            f"Cache {'miss' if use_cache else 'skipped'} for "
+            f"{document.cik}/{document.accession_number}, performing extraction"
         )
 
         all_extracted = []
@@ -402,8 +404,8 @@ class TextExtractor:
                 )
                 all_extracted.extend(paragraphs)
 
-        # Save results to cache
-        self._save_extracted_texts_to_cache(cache_key, all_extracted)
+        if use_cache:
+            self._save_extracted_texts_to_cache(cache_key, all_extracted)
 
         logger.info(
             f"Completed extraction for {document.cik}/{document.accession_number}: "
@@ -417,6 +419,7 @@ class TextExtractor:
         documents: list[ChunkedDocument],
         extract_sentences: bool = True,
         extract_paragraphs: bool = True,
+        use_cache: bool = False,
     ) -> list[ExtractedText]:
         """
         Extract text segments from multiple ChunkedDocuments
@@ -425,6 +428,8 @@ class TextExtractor:
             documents: List of ChunkedDocument objects to process
             extract_sentences: Whether to extract sentences
             extract_paragraphs: Whether to extract paragraphs
+            use_cache: If True, bypass cache load/write logic for all documents.
+                Defaults to False.
 
         Returns:
             List of ExtractedText objects from all documents
@@ -433,7 +438,7 @@ class TextExtractor:
 
         for document in documents:
             extracted = self.extract_from_document(
-                document, extract_sentences, extract_paragraphs
+                document, extract_sentences, extract_paragraphs, use_cache=use_cache
             )
             all_extracted.extend(extracted)
 

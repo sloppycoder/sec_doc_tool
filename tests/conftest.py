@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 mock_data_path = Path(__file__).parent / "mockdata/cache"
-os.environ["CACHE_PREFIX"] = str(mock_data_path)
+os.environ["STORAGE_PREFIX"] = str(mock_data_path)
 
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
