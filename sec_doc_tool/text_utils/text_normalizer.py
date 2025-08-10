@@ -158,7 +158,9 @@ class TextNormalizer:
         # 6. Normalize whitespace while preserving line structure
         text = re.sub(r"[ \t]+", " ", text)  # normalize horizontal whitespace
         text = re.sub(r"\s*\n\s*", "\n", text)  # remove spaces around line breaks
-        text = re.sub(r"\n{2,}", "\n", text)  # collapse multiple line breaks
+        text = re.sub(
+            r"\n{3,}", "\n\n", text
+        )  # collapse 3+ line breaks to double newlines
         text = text.strip()
 
         return text
