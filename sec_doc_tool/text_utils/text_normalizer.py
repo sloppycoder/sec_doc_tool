@@ -147,15 +147,18 @@ class TextNormalizer:
         # 3. Remove trademark and registered symbols
         text = text.translate(self._translation_table)
 
-        # 4. Remove invisible or control characters (except \n or \t)
+        # 4. Remove checkbox symbols commonly found in SEC forms
+        text = re.sub(r"[☐☑☒]", "", text)
+
+        # 5. Remove invisible or control characters (except \n or \t)
         text = "".join(
             c for c in text if not unicodedata.category(c).startswith("C") or c in "\n\t"
         )
 
-        # 5. Remove whitespace between dollar sign and number, e.g. "$ 100" → "$100"
+        # 6. Remove whitespace between dollar sign and number, e.g. "$ 100" → "$100"
         text = re.sub(r"\$\s+(?=\d)", "$", text)
 
-        # 6. Normalize whitespace while preserving line structure
+        # 7. Normalize whitespace while preserving line structure
         text = re.sub(r"[ \t]+", " ", text)  # normalize horizontal whitespace
         text = re.sub(r"\s*\n\s*", "\n", text)  # remove spaces around line breaks
         text = re.sub(
