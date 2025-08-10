@@ -9,4 +9,8 @@ from .generic_filter import GenericFundFilter
 from .partial_matcher import PartialMatcher
 from .text_normalizer import TextNormalizer
 
-__all__ = ["TextNormalizer", "GenericFundFilter", "PartialMatcher"]
+__all__ = [
+    "TextNormalizer",
+    "GenericFundFilter",
+    "PartialMatcher",
+]

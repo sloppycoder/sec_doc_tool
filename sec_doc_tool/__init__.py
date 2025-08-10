@@ -1,18 +1,15 @@
 from __future__ import annotations
 
-from .chunking import ChunkedDocument
+from .chunking import ChunkedDocument, ExtractedText, TextExtractor
 from .edgar import EdgarFiling
 from .nlp_model import get_nlp_model
-from .storage import delete_obj_from_storage, load_obj_from_storage, write_obj_to_storage
-from .text_utils.text_extractor import ExtractedText, TextExtractor
+from .text_utils import TextNormalizer
 
 __all__ = [
     "EdgarFiling",
     "ChunkedDocument",
     "TextExtractor",
     "ExtractedText",
-    "load_obj_from_storage",
-    "write_obj_to_storage",
-    "delete_obj_from_storage",
+    "TextNormalizer",
     "get_nlp_model",
 ]

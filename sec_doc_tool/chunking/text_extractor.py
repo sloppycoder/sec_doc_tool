@@ -6,8 +6,8 @@ from typing import Any
 import spacy
 from pydantic import BaseModel, Field
 
-from ..chunking import ChunkedDocument
 from ..storage import load_obj_from_storage, write_obj_to_storage
+from .document import ChunkedDocument
 
 logger = logging.getLogger(__name__)
 
