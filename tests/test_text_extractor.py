@@ -6,8 +6,8 @@ from sec_doc_tool import (
     TextExtractor,
 )
 
-# Stub list of mutual fund names - user will fill in later
-KNOWN_FUND_NAMES = [
+# Stub list of entity names - user will fill in later
+KNOWN_ENTITY_NAMES = [
     "Leuthold Core Investment Fund",
     "Leuthold Global Industries Fund",
     "Leuthold Global Fund",
@@ -37,14 +37,14 @@ def sample_documents() -> list[ChunkedDocument]:
 
 @pytest.fixture
 def text_extractor() -> TextExtractor:
-    """Create a TextExtractor with stub fund names"""
-    return TextExtractor(KNOWN_FUND_NAMES)
+    """Create a TextExtractor with stub entity names"""
+    return TextExtractor(KNOWN_ENTITY_NAMES)
 
 
 def test_text_extraction(
     sample_documents: list[ChunkedDocument], text_extractor: TextExtractor
 ):
-    """Test extracting text segments containing fund names"""
+    """Test extracting text segments containing entity names"""
     # Test with first document
     extracted_samples = text_extractor.extract_from_document(
         sample_documents[0], extract_sentences=True, extract_paragraphs=True
@@ -66,7 +66,7 @@ def test_text_extraction(
             "parenthetical",
             "other",
         ]
-        assert isinstance(sample.fund_names_found, list)
+        assert isinstance(sample.entity_names_found, list)
         assert isinstance(sample.chunk_index, int)
         assert isinstance(sample.sentence_index, int)
         assert sample.chunk_index >= 0
@@ -78,14 +78,14 @@ def test_extracted_text_model():
     extracted = ExtractedText(
         text="This is a test sentence about Test Fund Alpha.",
         context_type="narrative",
-        fund_names_found=["Test Fund Alpha"],
+        entity_names_found=["Test Fund Alpha"],
         chunk_index=0,
         sentence_index=1,
     )
 
     assert extracted.text == "This is a test sentence about Test Fund Alpha."
     assert extracted.context_type == "narrative"
-    assert extracted.fund_names_found == ["Test Fund Alpha"]
+    assert extracted.entity_names_found == ["Test Fund Alpha"]
     assert extracted.chunk_index == 0
     assert extracted.sentence_index == 1
 
@@ -93,7 +93,7 @@ def test_extracted_text_model():
     extracted_para = ExtractedText(
         text="This is a paragraph.",
         context_type="narrative",
-        fund_names_found=["Test Fund Alpha"],
+        entity_names_found=["Test Fund Alpha"],
         chunk_index=0,
     )
     assert extracted_para.sentence_index == -1
@@ -106,11 +106,11 @@ def test_extracted_text_model():
     # Test deserialization
     recreated = ExtractedText.model_validate(data)
     assert recreated.text == extracted.text
-    assert recreated.fund_names_found == extracted.fund_names_found
+    assert recreated.entity_names_found == extracted.entity_names_found
 
 
 def test_context_detection():
-    """Test enhanced context detection with fund name prominence and parenthetical"""
+    """Test enhanced context detection with entity name prominence and parenthetical"""
     extractor = TextExtractor(["ABC Growth Fund", "XYZ Bond Fund"])
 
     # Test parenthetical detection
@@ -120,12 +120,12 @@ def test_context_detection():
     context = extractor._detect_context_type(parenthetical_text, {}, ["ABC Growth Fund"])
     assert context == "parenthetical"
 
-    # Test fund name prominence in headers
+    # Test entity name prominence in headers
     header_text = "ABC Growth Fund\nAnnual Report 2024"
     context = extractor._detect_context_type(header_text, {}, ["ABC Growth Fund"])
     assert context == "header"
 
-    # Test normal narrative (fund name present but not prominent)
+    # Test normal narrative (entity name present but not prominent)
     narrative_text = (
         "The ABC Growth Fund achieved strong performance this quarter "
         "with returns exceeding expectations."

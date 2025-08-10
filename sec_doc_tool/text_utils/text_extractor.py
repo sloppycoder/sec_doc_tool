@@ -17,7 +17,7 @@ class ExtractedText(BaseModel):
 
     text: str
     context_type: str  # 'narrative', 'table', 'header', 'list', 'other'
-    fund_names_found: list[str]
+    entity_names_found: list[str]
     chunk_index: int
     sentence_index: int = Field(default=-1)  # -1 for paragraph-level extraction
     document_key: str = Field(default="")  # Format: "{cik}/{accession_number}"
@@ -25,18 +25,18 @@ class ExtractedText(BaseModel):
 
 
 class TextExtractor:
-    """Extracts sentences and paragraphs containing fund names from ChunkedDocument"""
+    """Extracts sentences and paragraphs containing entity names from ChunkedDocument"""
 
-    def __init__(self, fund_names: list[str], lazy_load_nlp: bool = False):
+    def __init__(self, entity_names: list[str], lazy_load_nlp: bool = False):
         """
-        Initialize with list of fund names to search for
+        Initialize with list of entity names to search for
 
         Args:
-            fund_names: List of mutual fund names to extract
+            entity_names: List of entity names to extract
             lazy_load_nlp: If True, delay spaCy model loading until first use
         """
-        self.fund_names = fund_names
-        self.fund_names_lower = [name.lower() for name in fund_names]
+        self.entity_names = entity_names
+        self.entity_names_lower = [name.lower() for name in entity_names]
         self._nlp: Any | None = None
         self.lazy_load_nlp = lazy_load_nlp
 
@@ -139,28 +139,28 @@ class TextExtractor:
             logger.warning(f"Failed to load cache for key {cache_key}: {e}")
             return None
 
-    def _contains_fund_name(self, text: str) -> list[str]:
+    def _contains_entity_name(self, text: str) -> list[str]:
         """
-        Check if text contains any fund names
+        Check if text contains any entity names
 
         Args:
             text: Text to search
 
         Returns:
-            List of fund names found in the text
+            List of entity names found in the text
         """
         text_lower = text.lower()
         found_names = []
 
-        for i, fund_name in enumerate(self.fund_names_lower):
-            if fund_name in text_lower:
-                found_names.append(self.fund_names[i])
+        for i, entity_name in enumerate(self.entity_names_lower):
+            if entity_name in text_lower:
+                found_names.append(self.entity_names[i])
 
         return found_names
 
     # ruff: noqa: C901
     def _detect_context_type(
-        self, text: str, chunk_tags: dict[str, Any], fund_names_found: list[str]
+        self, text: str, chunk_tags: dict[str, Any], entity_names_found: list[str]
     ) -> str:
         """
         Detect the context type of the text segment
@@ -168,7 +168,7 @@ class TextExtractor:
         Args:
             text: Text segment to analyze
             chunk_tags: Tags associated with the chunk
-            fund_names_found: Fund names found in this text (for prominence analysis)
+            entity_names_found: Entity names found in this text (for prominence analysis)
 
         Returns:
             Context type: 'narrative', 'table', 'header', 'list', 'parenthetical', 'other'
@@ -184,18 +184,21 @@ class TextExtractor:
             if chunk_tags.get("is_list", False):
                 return "list"
 
-        # Check for parenthetical mentions (fund name in parentheses)
-        for fund_name in fund_names_found:
-            if f"({fund_name})" in text or f"({fund_name.upper()})" in text:
+        # Check for parenthetical mentions (entity name in parentheses)
+        for entity_name in entity_names_found:
+            if f"({entity_name})" in text or f"({entity_name.upper()})" in text:
                 return "parenthetical"
 
-        # Check for fund name prominence in headers (fund name dominates the line)
+        # Check for entity name prominence in headers (entity name dominates the line)
         lines = text.split("\n")
         for line in lines:
             line_stripped = line.strip()
             if len(line_stripped) > 0:
-                for fund_name in fund_names_found:
-                    if fund_name in line and len(fund_name) / len(line_stripped) > 0.6:
+                for entity_name in entity_names_found:
+                    if (
+                        entity_name in line
+                        and len(entity_name) / len(line_stripped) > 0.6
+                    ):
                         return "header"
 
         # Rule-based detection for context types
@@ -252,7 +255,7 @@ class TextExtractor:
         self, text: str, chunk_index: int, chunk_tags: dict[str, Any], document_key: str
     ) -> list[ExtractedText]:
         """
-        Extract sentences containing fund names from text
+        Extract sentences containing entity names from text
 
         Args:
             text: Text to process
@@ -275,18 +278,18 @@ class TextExtractor:
             if len(sent_text) < 20:
                 continue
 
-            fund_names_found = self._contains_fund_name(sent_text)
+            entity_names_found = self._contains_entity_name(sent_text)
 
-            if fund_names_found:
+            if entity_names_found:
                 context_type = self._detect_context_type(
-                    sent_text, chunk_tags, fund_names_found
+                    sent_text, chunk_tags, entity_names_found
                 )
 
                 extracted.append(
                     ExtractedText(
                         text=sent_text,
                         context_type=context_type,
-                        fund_names_found=fund_names_found,
+                        entity_names_found=entity_names_found,
                         chunk_index=chunk_index,
                         sentence_index=sent_idx,
                         document_key=document_key,
@@ -299,7 +302,7 @@ class TextExtractor:
         self, text: str, chunk_index: int, chunk_tags: dict[str, Any], document_key: str
     ) -> list[ExtractedText]:
         """
-        Extract paragraphs containing fund names from text
+        Extract paragraphs containing entity names from text
 
         Args:
             text: Text to process
@@ -321,18 +324,18 @@ class TextExtractor:
             if len(para_text) < 50:
                 continue
 
-            fund_names_found = self._contains_fund_name(para_text)
+            entity_names_found = self._contains_entity_name(para_text)
 
-            if fund_names_found:
+            if entity_names_found:
                 context_type = self._detect_context_type(
-                    para_text, chunk_tags, fund_names_found
+                    para_text, chunk_tags, entity_names_found
                 )
 
                 extracted.append(
                     ExtractedText(
                         text=para_text,
                         context_type=context_type,
-                        fund_names_found=fund_names_found,
+                        entity_names_found=entity_names_found,
                         chunk_index=chunk_index,
                         sentence_index=-1,  # Indicates paragraph-level
                         document_key=document_key,
@@ -348,7 +351,7 @@ class TextExtractor:
         extract_paragraphs: bool = True,
     ) -> list[ExtractedText]:
         """
-        Extract text segments containing fund names from a ChunkedDocument
+        Extract text segments containing entity names from a ChunkedDocument
 
         Args:
             document: ChunkedDocument to process
@@ -450,127 +453,3 @@ class QueueHandler(logging.Handler):
         except Exception:
             # Silently ignore errors to avoid breaking the worker
             pass
-
-
-def _calculate_quality_score_worker(extracted: "ExtractedText") -> float:
-    """
-    Calculate quality score for an extracted text sample in worker process
-
-    This is a simplified version of DiversityFilter._calculate_quality_score
-    to avoid importing the entire pipeline module in workers.
-    """
-    text = extracted.text
-    score = 0.0
-
-    # Length score (prefer medium-length texts)
-    length = len(text)
-    if 50 <= length <= 300:
-        score += 0.3
-    elif 300 < length <= 500:
-        score += 0.2
-    elif length > 500:
-        score += 0.1
-
-    # Grammar/structure score
-    sentence_count = len(re.findall(r"[.!?]+", text))
-    if sentence_count >= 1:
-        score += 0.2
-
-    # Capitalization score (prefer proper sentence case)
-    if text[0].isupper() if text else False:
-        score += 0.1
-
-    # Fund name prominence score (prefer texts where fund names are clearly mentioned)
-    fund_mentions = len(extracted.fund_names_found)
-    if fund_mentions == 1:
-        score += 0.3  # Single fund mention is ideal
-    elif fund_mentions == 2:
-        score += 0.2
-    elif fund_mentions > 2:
-        score += 0.1
-
-    # Context type scoring
-    context_scores = {
-        "narrative": 0.3,  # Prefer narrative text
-        "parenthetical": 0.25,  # Parenthetical mentions are quite valuable
-        "table": 0.2,  # Tables can be useful but less preferred
-        "list": 0.15,  # Lists are okay
-        "header": 0.1,  # Headers are less useful
-        "other": 0.05,  # Other types least preferred
-    }
-    score += context_scores.get(extracted.context_type, 0)
-
-    # Penalty for very repetitive text
-    words = text.lower().split()
-    if len(words) > 0:
-        unique_words = len(set(words))
-        repetition_ratio = unique_words / len(words)
-        if repetition_ratio < 0.5:
-            score *= 0.7  # Penalty for repetitive text
-
-    # Penalty for text with too many numbers/symbols
-    alpha_ratio = sum(c.isalpha() or c.isspace() for c in text) / len(text)
-    if alpha_ratio < 0.7:
-        score *= 0.8
-
-    return min(score, 1.0)
-
-
-def _process_document_worker(args):
-    """
-    Worker function for multiprocessing document extraction with logging support
-
-    Args:
-        args: Tuple of (
-            document_key, fund_names, extract_sentences, extract_paragraphs, index,
-            total_documents, document_fund_names
-        )
-
-    Returns:
-        List of ExtractedText objects or None on failure
-    """
-    (
-        document_key,
-        fund_names,
-        extract_sentences,
-        extract_paragraphs,
-        index,
-        total_documents,
-        document_fund_names,
-    ) = args
-
-    try:
-        cik, accession_number = document_key.split("/")
-        logger.info(
-            f"Worker starting for processing {index}/{total_documents} {document_key}"
-        )
-
-        # Load the document inside the worker
-        document = ChunkedDocument.init(cik, accession_number)
-        if not document:
-            logger.error(f"Worker failed to load document: {document_key}")
-            return None
-
-        # Save memory by clearing html_pages
-        document.html_pages = []
-
-        # Create TextExtractor with lazy loading for this process
-        extractor = TextExtractor(fund_names, lazy_load_nlp=True)
-
-        extracted = extractor.extract_from_document(
-            document, extract_sentences, extract_paragraphs
-        )
-
-        # Calculate quality scores for all samples
-        for sample in extracted:
-            sample.quality_score = _calculate_quality_score_worker(sample)
-
-        logger.info(
-            f"Worker completed: {document_key}, Extracted {len(extracted)} segments"
-        )
-
-        return extracted
-
-    except Exception as e:
-        logger.error(f"Worker failed: {document_key}, Error: {e}")
-        return None
