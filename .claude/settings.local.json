@@ -4,7 +4,8 @@
       "Bash(pytest:*)",
       "Bash(ruff check:*)",
       "WebFetch(domain:docs.github.com)",
-      "Bash(pyright:*)"
+      "Bash(pyright:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   }
