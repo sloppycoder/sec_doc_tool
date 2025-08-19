@@ -113,16 +113,34 @@ class ChunkedDocument(BaseModel):
 
         return filing
 
-    def get_chunk_with_context(self, chunk_index: int, context_size: int = 500) -> str:
-        """return chunk text along with context from prev and next chunks"""
-        curr_chunk = self.text_chunks[chunk_index]
-        prev_chunk = self.text_chunks[chunk_index - 1] if chunk_index > 0 else ""
+    def get_chunk_with_context(
+        self, start_chunk: int, end_chunk: int | None = None, context_size: int = 500
+    ) -> str:
+        """return concatenated chunk text from start_chunk to end_chunk along with context"""
+        if end_chunk is None:
+            end_chunk = start_chunk
+
+        # Validate chunk indices
+        if start_chunk < 0 or start_chunk >= len(self.text_chunks):
+            raise IndexError(f"start_chunk {start_chunk} out of range")
+        if end_chunk < 0 or end_chunk >= len(self.text_chunks):
+            raise IndexError(f"end_chunk {end_chunk} out of range")
+        if start_chunk > end_chunk:
+            raise ValueError("start_chunk cannot be greater than end_chunk")
+
+        # Get the concatenated chunks
+        selected_chunks = self.text_chunks[start_chunk : end_chunk + 1]
+        main_content = "\n\n".join(selected_chunks)
+
+        # Get context from previous and next chunks
+        prev_chunk = self.text_chunks[start_chunk - 1] if start_chunk > 0 else ""
         next_chunk = (
-            self.text_chunks[chunk_index + 1]
-            if chunk_index < len(self.text_chunks) - 1
+            self.text_chunks[end_chunk + 1]
+            if end_chunk < len(self.text_chunks) - 1
             else ""
         )
-        return f"{prev_chunk[-1 * context_size :]}\n\n{curr_chunk}\n\n{next_chunk[:context_size]}"
+
+        return f"{prev_chunk[-1 * context_size :]}\n\n{main_content}\n\n{next_chunk[:context_size]}"
 
     def _save(self) -> bool:
         """
