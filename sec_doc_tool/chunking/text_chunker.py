@@ -105,28 +105,36 @@ def _process_lines_batch(
 ) -> int:
     """
     Process a batch of lines using conditional and batch processing.
+    Maintains original line order while optimizing sentence splitting.
     Returns the updated current_size.
     """
     # Separate lines that need sentence splitting from those that don't
     lines_needing_splitting = []
-    lines_not_needing_splitting = []
+    line_processing_map = {}  # Maps line to processing type and order
 
-    for line in lines:
+    for i, line in enumerate(lines):
         if _needs_sentence_splitting(line):
             lines_needing_splitting.append(line)
+            line_processing_map[line] = ("split", i)
         else:
-            lines_not_needing_splitting.append(line)
+            line_processing_map[line] = ("direct", i)
 
-    # Process lines that don't need sentence splitting (fast path)
-    for line in lines_not_needing_splitting:
-        current_size = _add_to_chunk(
-            line, current_chunk, current_size, chunks, chunk_size
-        )
-
-    # Batch process lines that need sentence splitting
+    # Batch process lines that need sentence splitting to get sentence map
+    sentence_map = {}
     if lines_needing_splitting:
         sentence_map = _batch_process_lines(lines_needing_splitting)
-        for line in lines_needing_splitting:
+
+    # Process all lines in original order
+    for line in lines:
+        processing_type, _ = line_processing_map[line]
+
+        if processing_type == "direct":
+            # Process directly without sentence splitting (fast path)
+            current_size = _add_to_chunk(
+                line, current_chunk, current_size, chunks, chunk_size
+            )
+        else:
+            # Use pre-computed sentences from batch processing
             sentences = sentence_map.get(line, [line])
             for sentence in sentences:
                 if sentence.strip():  # Skip empty sentences

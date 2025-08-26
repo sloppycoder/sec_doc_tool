@@ -82,7 +82,7 @@ class ChunkedDocument(BaseModel):
             for i, page in enumerate(html_pages):
                 chunks = chunk_text(trim_html(page))
                 text_chunks.extend(chunks)
-                page_refs.append(i)
+                page_refs.extend([i] * len(chunks))
 
         elif doc_path.endswith(".txt"):
             html_pages = []
