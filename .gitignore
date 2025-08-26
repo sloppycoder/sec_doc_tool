@@ -33,3 +33,4 @@ build/
 /cache/
 extracted_texts/
 *.db
+.claude/*local.json
