@@ -303,9 +303,30 @@ def _check_table_row(line: str) -> tuple[bool, bool]:
     And if the table row is empty
     return [is_table_row, is_table_row_empty]
     """
-    parts = [cell.strip() for cell in line.strip().split("|")]
+    line_stripped = line.strip()
 
-    if len(parts) < 3:
+    # Check if line contains pipe character(s)
+    if "|" not in line_stripped:
+        return False, False
+
+    parts = [cell.strip() for cell in line_stripped.split("|")]
+
+    # Accept if:
+    # - At least 3 parts (original logic) OR
+    # - At least 2 parts with non-empty content OR
+    # - Line ends with "|" (single column case)
+    if len(parts) >= 3:
+        # Original logic for 3+ columns
+        pass
+    elif len(parts) >= 2:
+        # 2 column case - at least one part should have content
+        non_empty_parts = [p for p in parts if p.strip()]
+        if len(non_empty_parts) == 0:
+            return False, False
+    elif line_stripped.endswith("|"):
+        # Single column ending with | (like "Income Builder Fund |")
+        pass
+    else:
         return False, False
 
     cells = [cell.strip() for cell in parts if cell.strip()]

@@ -75,7 +75,7 @@ def test_chunk_txt_filing(mock_edgar_file, mock_file_content):
 
     chunks = chunk_text(filing_content)
 
-    assert len(chunks) == 191
+    assert len(chunks) == 192
     assert all(chunk and len(chunk) > 10 for chunk in chunks)
 
 
@@ -93,6 +93,14 @@ def test_chunk_text_optimization():
     comp_text = "Neill Nuttall | $500,001-$1,000,000"
     assert comp_text in chunks[1] and comp_text not in chunks[0]
     assert SAMPLE_TEXT_TO_CHUNK[:50].strip() in chunks[0]
+    # check if the table detection logic does not generate \n\n
+    # in the text (by checking indexes difference is 1)
+    line_indices = [
+        i
+        for i, line in enumerate(chunks[1].splitlines())
+        if "Neill Nuttall" in line or "Ashish Shah" in line
+    ]
+    assert len(line_indices) == 2 and abs(line_indices[0] - line_indices[1]) == 1
 
 
 def test_is_line_empty():
