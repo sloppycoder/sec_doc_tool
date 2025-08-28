@@ -15,7 +15,8 @@
       "WebFetch(domain:*)",
       "Bash(ruff check:*)",
       "Bash(pytest:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git log:*)"
     ],
     "ask": [
       "Bash(git commit:*)"
