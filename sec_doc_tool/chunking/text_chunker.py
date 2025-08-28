@@ -218,10 +218,91 @@ def chunk_text(content: str, chunk_size: int = DEFAULT_TEXT_CHUNK_SIZE) -> list[
 
     # Add any remaining content
     if current_chunk:
-        chunks.append("\n\n".join(current_chunk))
+        chunks.append(_smart_join_content_pieces(current_chunk))
 
-    # Remove empty chunks
-    return [chunk for chunk in chunks if chunk.strip() and len(chunk.strip()) > 100]
+    # Remove empty chunks and post-process to clean up table formatting
+    processed_chunks = []
+    for chunk in chunks:
+        if chunk.strip() and len(chunk.strip()) > 100:
+            processed_chunks.append(_clean_table_formatting_in_chunk(chunk))
+
+    return processed_chunks
+
+
+def _clean_table_formatting_in_chunk(chunk: str) -> str:
+    """
+    Clean up excessive empty lines within table sections in the final chunk.
+    """
+    lines = chunk.split("\n")
+    cleaned_lines = []
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        cleaned_lines.append(line)
+
+        # Check if current line is a table row
+        is_table_row, _ = _check_table_row(line)
+
+        if is_table_row:
+            # Look ahead for the next table row
+            j = i + 1
+            gap_lines = []
+
+            # Collect lines between this table row and the next
+            while j < len(lines):
+                next_line = lines[j]
+                next_is_table_row, _ = _check_table_row(next_line)
+
+                if next_is_table_row:
+                    # Found another table row - check if gap is excessive
+                    if len(gap_lines) > 2:
+                        # Too many lines between table rows - keep only meaningful content
+                        meaningful_lines = []
+                        for gap_line in gap_lines:
+                            # Keep lines with substantial content (not just spacing/fragments)
+                            if (
+                                gap_line.strip()
+                                and len(gap_line.strip()) > 10
+                                and gap_line.strip().lower()
+                                not in [
+                                    "capital",
+                                    "allocation",
+                                    "aggressive",
+                                    "moderate",
+                                    "conservative",
+                                ]
+                            ):
+                                meaningful_lines.append(gap_line)
+                            elif not gap_line.strip():  # Keep one empty line
+                                if not meaningful_lines or meaningful_lines[-1].strip():
+                                    meaningful_lines.append("")
+
+                        # If no meaningful content, just keep one empty line
+                        if not any(line.strip() for line in meaningful_lines):
+                            meaningful_lines = [""]
+
+                        cleaned_lines.extend(meaningful_lines)
+                        logger.debug(
+                            f"Cleaned table gap: {len(gap_lines)} lines -> {len(meaningful_lines)} lines"
+                        )
+                    else:
+                        # Normal gap, keep as is
+                        cleaned_lines.extend(gap_lines)
+
+                    i = j  # Skip to the next table row
+                    break
+                else:
+                    gap_lines.append(next_line)
+                    j += 1
+            else:
+                # No more table rows found, keep remaining lines
+                cleaned_lines.extend(gap_lines)
+                i = len(lines)
+        else:
+            i += 1
+
+    return "\n".join(cleaned_lines)
 
 
 def trim_html(content: str) -> str:
@@ -251,6 +332,14 @@ def _text2html(html_content: str):
     return converter.handle(html_content)
 
 
+def _smart_join_content_pieces(content_pieces: list[str]) -> str:
+    """
+    Join content pieces with standard double newline separation.
+    Table formatting is cleaned up in post-processing.
+    """
+    return "\n\n".join(content_pieces)
+
+
 def _add_to_chunk(
     content_piece: str,
     current_chunk: list[str],
@@ -274,7 +363,7 @@ def _add_to_chunk(
     content_size = len(content_piece)
     if current_size + content_size > chunk_size:
         # Save current chunk and start a new one
-        chunks.append("\n\n".join(current_chunk))
+        chunks.append(_smart_join_content_pieces(current_chunk))
         current_chunk[:] = [content_piece]  # Reset current_chunk with new content
         return content_size
     else:

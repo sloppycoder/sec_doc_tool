@@ -28,9 +28,6 @@ cdk.out
 # local files
 output/
 tmp/
-edgar*.json
-build/
+/build/
 /cache/
-extracted_texts/
-*.db
 .claude/*local.json

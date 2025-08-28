@@ -1,13 +1,9 @@
 from sec_doc_tool import ChunkedDocument, TextExtractor
 
-refresh_flag = False  # set to true to update the cache after algorithm change
-
 
 def test_doc_chunking():
     # Morgan Stanley Insight Fund
-    document = ChunkedDocument.init(
-        "1002427", "0001133228-24-004879", refresh=refresh_flag
-    )
+    document = ChunkedDocument.init("1002427", "0001133228-24-004879", refresh=True)
 
     # LEUTHOLD FUNDS, INC.
     # filing = ChunkedDocument.init("1000351", "0001387131-19-000505")
@@ -24,9 +20,7 @@ def test_doc_chunking():
 
 def test_extract_text_from_doc():
     # Morgan Stanley Insight Fund
-    document = ChunkedDocument.init(
-        "1002427", "0001133228-24-004879", refresh=refresh_flag
-    )
+    document = ChunkedDocument.init("1002427", "0001133228-24-004879", refresh=True)
     assert document and len(document.text_chunks) == 515
 
     text_extractor = TextExtractor(["Morgan Stanley Insight Fund"])
