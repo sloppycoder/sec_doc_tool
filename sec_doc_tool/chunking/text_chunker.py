@@ -145,6 +145,7 @@ def _process_lines_batch(
     return current_size
 
 
+# ruff: noqa C901
 def chunk_text(content: str, chunk_size: int = DEFAULT_TEXT_CHUNK_SIZE) -> list[str]:
     """
     Split a text into chunks of size chunk_size
@@ -229,6 +230,7 @@ def chunk_text(content: str, chunk_size: int = DEFAULT_TEXT_CHUNK_SIZE) -> list[
     return processed_chunks
 
 
+# ruff: noqa C901
 def _clean_table_formatting_in_chunk(chunk: str) -> str:
     """
     Clean up excessive empty lines within table sections in the final chunk.
